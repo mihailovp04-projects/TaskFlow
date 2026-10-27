@@ -46,6 +46,26 @@ public static class ConsoleInput
         }
     }
 
+    public static TaskPriority? ReadOptionalPriority()
+    {
+        while (true)
+        {
+            Console.Write("Priority (Low, Medium, High, Critical) (empty = keep): ");
+            var input = Console.ReadLine();
+            if (string.IsNullOrWhiteSpace(input))
+            {
+                return null;
+            }
+
+            if (Enum.TryParse<TaskPriority>(input.Trim(), ignoreCase: true, out var priority) && Enum.IsDefined(priority))
+            {
+                return priority;
+            }
+
+            Console.WriteLine("Unknown priority. Try again.");
+        }
+    }
+
     public static DateTime? ReadOptionalDate(string prompt)
     {
         while (true)

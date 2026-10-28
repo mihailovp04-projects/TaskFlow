@@ -37,7 +37,12 @@ public class Project
         }
     }
 
-    public string? Description { get; set; }
+    public string? Description
+    {
+        get;
+        set => field = string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    }
+
     public List<TaskItem> Tasks { get; } = new();
 
     public void AddTask(TaskItem task)

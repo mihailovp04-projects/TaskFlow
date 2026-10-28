@@ -50,7 +50,7 @@ public static class ConsoleInput
     {
         while (true)
         {
-            Console.Write("Status (Todo, InProgress, Done : )");
+            Console.Write("Status (Todo, InProgress, Done) [Todo]: ");
             var input = Console.ReadLine();
             if (string.IsNullOrWhiteSpace(input))
             {

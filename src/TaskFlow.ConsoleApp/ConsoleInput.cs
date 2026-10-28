@@ -46,6 +46,26 @@ public static class ConsoleInput
         }
     }
 
+    public static TaskItemStatus ReadStatus()
+    {
+        while (true)
+        {
+            Console.Write("Status (Todo, InProgress, Done : )");
+            var input = Console.ReadLine();
+            if (string.IsNullOrWhiteSpace(input))
+            {
+                return TaskItemStatus.Todo;
+            }
+
+            if (Enum.TryParse<TaskItemStatus>(input.Trim(), ignoreCase: true, out var status) && Enum.IsDefined(status))
+            {
+                return status;
+            }
+
+            Console.WriteLine("Unknown status. Try again.");
+        }
+    }
+
     public static TaskPriority? ReadOptionalPriority()
     {
         while (true)

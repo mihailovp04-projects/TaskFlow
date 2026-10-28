@@ -55,6 +55,15 @@ while (true)
             case "11":
                 AssignTaskToProject();
                 break;
+            case "12":
+                FilterByPriority();
+                break;
+            case "13":
+                FilterByStatus();
+                break;
+            case "14":
+                ShowStatistics();
+                break;
             case "0":
             case null:
                 Console.WriteLine("Bye!");
@@ -88,6 +97,9 @@ void PrintMenu()
     Console.WriteLine("9) Create project");
     Console.WriteLine("10) List projects");
     Console.WriteLine("11) Add task to project");
+    Console.WriteLine("12) Filter by priority");
+    Console.WriteLine("13) Filter by status");
+    Console.WriteLine("14) Show statistics");
     Console.WriteLine("0) Exit");
     Console.Write("Choose an option: ");
 }
@@ -212,6 +224,63 @@ void AssignTaskToProject()
     project.AddTask(task);
     Console.WriteLine($"Task #{task.Id} added to project '{project.Name}'.");
 }
+
+List<TaskItem> FindByPriority(TaskPriority priority)
+{
+    var result = new List<TaskItem>();
+    foreach (var item in tasks)
+    {
+        if (item.Priority == priority)
+        {
+            result.Add(item);
+        }
+    }
+        return result;
+    }
+
+List<TaskItem> FindByStatus(TaskItemStatus status)
+{
+    var result = new List<TaskItem>();
+    foreach (var item in tasks)
+    {
+        if (item.Status == status)
+        {
+            result.Add(item);
+        }
+    }
+    return result;
+}
+
+    void FilterByStatus()
+{
+    var status = ConsoleInput.ReadStatus();
+    PrintTasks(FindByStatus(status), $"Tasks with status {status}" );
+}
+
+void ShowStatistics()
+{
+    var counts = new Dictionary<TaskItemStatus, int>();
+    foreach(var status in Enum.GetValues<TaskItemStatus>())
+    {
+        counts[status] = 0;
+    }
+    foreach(var task in tasks) 
+    {
+        counts[task.Status]++;
+    }
+    Console.WriteLine("--- Statistics ---");
+    foreach (var pair in counts)
+    {
+        Console.WriteLine($"{pair.Key}: {pair.Value}");
+    }
+    Console.WriteLine($"Overdue: {FindOverdue(DateTime.Now).Count}");
+}
+
+void FilterByPriority()
+    {
+        var priority = ConsoleInput.ReadPriority();
+        PrintTasks(FindByPriority(priority), $"Tasks with priority {priority}");
+    }
 
 
     void ShowTaskDetails()

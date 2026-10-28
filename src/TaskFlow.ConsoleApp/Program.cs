@@ -4,6 +4,8 @@ using TaskFlow.Domain.Enums;
 
 var tasks = new List<TaskItem>();
 var nextId = 1;
+var projects = new Dictionary<int, Project>();
+var nextProjectId = 1;
 
 AddTask(new TaskItem("Install .NET 10 SDK", TaskPriority.High, DateTime.Today.AddDays(-2)));
 AddTask(new TaskItem("Read about value and reference types", TaskPriority.Medium, DateTime.Today.AddDays(3)));
@@ -44,6 +46,15 @@ while (true)
             case "8":
                 EditTask();
                 break;
+            case "9":
+                CreateProject();
+                break;
+            case "10":
+                ListProjects();
+                break;
+            case "11":
+                AssignTaskToProject();
+                break;
             case "0":
             case null:
                 Console.WriteLine("Bye!");
@@ -74,6 +85,9 @@ void PrintMenu()
     Console.WriteLine("6) Reopen task");
     Console.WriteLine("7) Show task details");
     Console.WriteLine("8) Edit task");
+    Console.WriteLine("9) Create project");
+    Console.WriteLine("10) List projects");
+    Console.WriteLine("11) Add task to project");
     Console.WriteLine("0) Exit");
     Console.Write("Choose an option: ");
 }
@@ -143,14 +157,64 @@ void EditTask()
         task.Priority = priority.Value;
     }
     var dueDate = ConsoleInput.ReadOptionalDate("New due date (empty = keep) : ");
-    if(dueDate !=null)
+    if (dueDate != null)
     {
         task.DueDate = dueDate;
     }
-
 }
 
-void ShowTaskDetails()
+    void CreateProject()
+    {
+        var name = ConsoleInput.ReadText("Project name: ");
+        var description = ConsoleInput.ReadText("Project description (empty = none): ");
+        foreach (var existing in projects.Values)
+        {
+            if (string.Equals(existing.Name, name.Trim(), StringComparison.OrdinalIgnoreCase))
+            {
+                Console.WriteLine($"Project '{name}' already exists.");
+                return;
+            }
+        }
+        
+        var project = new Project(name, description);
+
+        project.Id = nextProjectId;
+         nextProjectId++;
+        projects.Add(project.Id, project);
+
+        Console.WriteLine($"Created: #{project.Id} {project.Name}");
+    }
+void ListProjects()
+{
+    if(projects.Count == 0)
+    {
+        Console.WriteLine("(no projects)");
+        return;
+    }
+    foreach(var project in projects.Values)
+    {
+        Console.WriteLine($"#{project.Id} {project.Name} (tasks: {project.Tasks.Count}, overdue: {project.CountOverdue(DateTime.Now)})");
+    }
+}
+void AssignTaskToProject()
+{
+    var task = AskForTask();
+    if (task is null)
+    {
+        return;
+    }
+    var projectId = ConsoleInput.ReadInt("Project id:");
+    if (!projects.TryGetValue(projectId, out var project))
+    {
+        Console.WriteLine($"Project #{projectId} not found.");
+        return;
+    }
+    project.AddTask(task);
+    Console.WriteLine($"Task #{task.Id} added to project '{project.Name}'.");
+}
+
+
+    void ShowTaskDetails()
 {
     var task = AskForTask();
     if (task is null) {

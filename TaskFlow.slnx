@@ -3,4 +3,7 @@
     <Project Path="src/TaskFlow.ConsoleApp/TaskFlow.ConsoleApp.csproj" />
     <Project Path="src/TaskFlow.Domain/TaskFlow.Domain.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/TaskFlow.Domain.Tests/TaskFlow.Domain.Tests.csproj" />
+  </Folder>
 </Solution>

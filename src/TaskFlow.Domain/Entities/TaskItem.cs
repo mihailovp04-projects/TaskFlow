@@ -1,15 +1,20 @@
+using System.Text.Json.Serialization;
 using TaskFlow.Domain.Enums;
 
 namespace TaskFlow.Domain.Entities;
 
-public class TaskItem
+public class TaskItem : BaseEntity
 {
     public const int TitleMaxLength = 200;
     public const int DescriptionMaxLength = 2000;
 
     private string _title = string.Empty;
     private string? _description;
-    private TaskPriority _priority;
+
+    [JsonConstructor]
+    private TaskItem()
+    {
+    }
 
     public TaskItem(string title, TaskPriority priority = TaskPriority.Medium, DateTime? dueDate = null, string? description = null)
     {
@@ -17,13 +22,7 @@ public class TaskItem
         Priority = priority;
         DueDate = dueDate;
         Description = description;
-        Status = TaskItemStatus.Todo;
-        CreatedAt = DateTime.Now;
     }
-
-    public int Id { get; set; }
-
-    public DateTime CreatedAt { get; private set; }
 
     public string Title
     {
@@ -32,13 +31,13 @@ public class TaskItem
         {
             if (string.IsNullOrWhiteSpace(value))
             {
-                throw new ArgumentException("Title is required.", nameof(Title));
+                throw new ArgumentException("Название задачи обязательно.", nameof(Title));
             }
 
-            var trimmed = value.Trim();
+            string trimmed = value.Trim();
             if (trimmed.Length > TitleMaxLength)
             {
-                throw new ArgumentException($"Title must be at most {TitleMaxLength} characters.", nameof(Title));
+                throw new ArgumentException($"Название не может быть длиннее {TitleMaxLength} символов.", nameof(Title));
             }
 
             _title = trimmed;
@@ -52,49 +51,43 @@ public class TaskItem
         {
             if (value is not null && value.Length > DescriptionMaxLength)
             {
-                throw new ArgumentException($"Description must be at most {DescriptionMaxLength} characters.", nameof(Description));
+                throw new ArgumentException($"Описание не может быть длиннее {DescriptionMaxLength} символов.", nameof(Description));
             }
+
             _description = string.IsNullOrWhiteSpace(value) ? null : value.Trim();
         }
     }
 
-    public TaskPriority Priority
-    {
-        get => _priority;
-        set
-        {
-            if (!Enum.IsDefined(value))
-            {
-                throw new ArgumentOutOfRangeException(nameof(Priority), value, "Unknown priority.");
-            }
+    public TaskPriority Priority { get; set; }
 
-            _priority = value;
-        }
-    }
-    public TaskItemStatus Status { get; private set; }
+    [JsonInclude]
+    public TaskItemStatus Status { get; private set; } = TaskItemStatus.Todo;
 
     public DateTime? DueDate { get; set; }
 
+    [JsonInclude]
     public DateTime? CompletedAt { get; private set; }
 
     public int? ProjectId { get; set; }
 
+    [JsonIgnore]
     public Project? Project { get; set; }
 
     public void Start()
     {
         if (Status != TaskItemStatus.Todo)
         {
-            throw new InvalidOperationException($"Only a task in status Todo can be started. Current status: {Status}.");
+            throw new InvalidOperationException($"Начать можно только задачу в статусе {TaskItemStatus.Todo}, текущий статус: {Status}.");
         }
 
         Status = TaskItemStatus.InProgress;
     }
+
     public void Complete(DateTime now)
     {
         if (Status == TaskItemStatus.Done)
         {
-            throw new InvalidOperationException("The task is already done.");
+            throw new InvalidOperationException("Задача уже выполнена.");
         }
 
         Status = TaskItemStatus.Done;
@@ -105,20 +98,18 @@ public class TaskItem
     {
         if (Status != TaskItemStatus.Done)
         {
-            throw new InvalidOperationException($"Only a done task can be reopened. Current status: {Status}.");
+            throw new InvalidOperationException("Вернуть в работу можно только выполненную задачу.");
         }
 
         Status = TaskItemStatus.Todo;
         CompletedAt = null;
     }
-    public bool IsOverdue(DateTime now)
-    {
-        return Status != TaskItemStatus.Done && DueDate.HasValue && DueDate.Value.Date < now.Date;
-    }
 
-    public override string ToString()
-    {
-        var due = DueDate.HasValue ? DueDate.Value.ToString("yyyy-MM-dd") : "-";
-        return $"#{Id} [{Status}] {Title} (priority: {Priority}, due: {due})";
-    }
+    public bool IsOverdue(DateTime now) =>
+        Status != TaskItemStatus.Done
+        && DueDate is not null
+        && DueDate.Value.Date < now.Date;
+
+    public override string ToString() =>
+        $"#{Id} {Title} [{Priority}, {Status}]" + (DueDate is null ? string.Empty : $" срок: {DueDate:yyyy-MM-dd}");
 }

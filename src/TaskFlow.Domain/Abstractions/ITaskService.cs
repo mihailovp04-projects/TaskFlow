@@ -5,11 +5,12 @@ namespace TaskFlow.Domain.Abstractions;
 
 public interface ITaskService
 {
-    TaskItem Create(string title, TaskPriority priority, DateTime? dueDate, string? description = null);
+    TaskItem Create(string title, TaskPriority priority, DateTime? dueDate, string? description = null, int? projectId = null);
 
     IReadOnlyList<TaskItem> GetAll();
 
     IReadOnlyList<TaskItem> Search(string text);
+    IReadOnlyList<TaskItem> Filter(TaskItemStatus? status, TaskPriority? priority);
 
     void Start(int id);
 

@@ -45,4 +45,64 @@ public class TaskServiceTests
         Assert.Single(_notifier.Messages);
         Assert.Contains($"#{task.Id}", _notifier.Messages[0]);
     }
+
+    [Fact]
+    public void Start_WhenMaxTasksInProgress_ThrowsInvalidOperationException()
+    {
+        // Arrange
+        var first = _service.Create("Задача 1", TaskPriority.Low, null);
+        var second = _service.Create("Задача 2", TaskPriority.Low, null);
+        var third = _service.Create("Задача 3", TaskPriority.Low, null);
+        var fourth = _service.Create("Задача 4", TaskPriority.Low, null);
+        _service.Start(first.Id);
+        _service.Start(second.Id);
+        _service.Start(third.Id);
+
+        // Act + Assert
+        Assert.Throws<InvalidOperationException>(() => _service.Start(fourth.Id));
+    }
+
+    [Fact]
+    public void Search_IgnoresCase()
+    {
+        // Arrange
+        _service.Create("Подготовить Демо", TaskPriority.Medium, null);
+
+        // Act
+        var result = _service.Search("демо");
+
+        // Assert
+        var found = Assert.Single(result);
+        Assert.Equal("Подготовить Демо", found.Title);
+    }
+
+    [Fact]
+    public void Delete_NonExistingId_ReturnsFalseAndDoesNotNotify()
+    {
+        // Arrange
+        int missingId = 99;
+
+        // Act
+        bool deleted = _service.Delete(missingId);
+
+        // Assert
+        Assert.False(deleted);
+        Assert.Empty(_notifier.Messages);
+    }
+
+    [Fact]
+    public void Filter_ByTodo_ReturnsOnlyTodoTasks()
+    {
+        // Arrange
+        var started = _service.Create("В работе", TaskPriority.Low, null);
+        var todo = _service.Create("Сделать", TaskPriority.Low, null);
+        _service.Start(started.Id);
+
+        // Act
+        var result = _service.Filter(TaskItemStatus.Todo, null );
+
+        // Assert
+        var found = Assert.Single(result);
+        Assert.Equal(todo.Id, found.Id);
+    }
 }

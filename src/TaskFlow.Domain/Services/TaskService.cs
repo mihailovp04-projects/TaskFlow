@@ -25,7 +25,7 @@ public sealed class TaskService : ITaskService
 
     private DateTime Now => _clock.GetLocalNow().DateTime;
 
-    public TaskItem Create(string title, TaskPriority priority, DateTime? dueDate, string? description = null)
+    public TaskItem Create(string title, TaskPriority priority, DateTime? dueDate, string? description = null, int? projectId = null)
     {
         if (dueDate is not null && dueDate.Value.Date < Now.Date)
         {
@@ -34,7 +34,8 @@ public sealed class TaskService : ITaskService
 
         var task = new TaskItem(title, priority, dueDate, description)
         {
-            CreatedAt = Now
+            CreatedAt = Now,
+            ProjectId = projectId
         };
 
         _repository.Add(task);
@@ -62,6 +63,13 @@ public sealed class TaskService : ITaskService
             .OrderBy(t => t.Id)
             .ToList();
     }
+
+    public IReadOnlyList<TaskItem> Filter(TaskItemStatus? status, TaskPriority? priority) =>
+    _repository.GetAll()
+        .Where(t => (status is null || t.Status == status)
+                 && (priority is null || t.Priority == priority))
+        .OrderBy(t => t.Id)
+        .ToList();
 
     public void Start(int id)
     {

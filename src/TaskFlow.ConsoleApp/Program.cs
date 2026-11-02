@@ -14,19 +14,25 @@ Console.InputEncoding = Encoding.UTF8;
 string dataFolder = Path.Combine(Environment.CurrentDirectory, "data");
 bool useMemory = args.Contains("--memory");
 
-ITaskRepository repository = useMemory
-    ? new InMemoryTaskRepository()
-    : new JsonFileTaskRepository(Path.Combine(dataFolder, "tasks.json"));
-
 INotifier notifier = new CompositeNotifier(
     new ConsoleNotifier(),
     new FileNotifier(Path.Combine(dataFolder, "notifications.log")));
+
+ITaskRepository repository = useMemory
+    ? new InMemoryTaskRepository()
+    : new JsonFileTaskRepository(Path.Combine(dataFolder, "tasks.json"));
+repository = new LoggingTaskRepository(repository, notifier);
+
+IProjectRepository projectRepository = new InMemoryProjectRepository();
 
 TimeProvider clock = TimeProvider.System;
 ITaskService service = new TaskService(repository, notifier, clock);
 
 TaskReport overdueReport = new OverdueReport();
 TaskReport priorityReport = new ByPriorityReport();
+TaskReport dueSoonReport = new DueSoonReport();
+
+var exporter = new TaskExporter();
 
 Console.WriteLine(useMemory
     ? "TaskFlow, неделя 2. Хранилище: память (данные пропадут после выхода)"
@@ -50,6 +56,11 @@ while (true)
     Console.WriteLine("8. Отчёт: просроченные задачи");
     Console.WriteLine("9. Отчёт: по приоритету");
     Console.WriteLine("10. Статистика по статусам");
+    Console.WriteLine("11. Отчёт: срок в ближайшие 7 дней");
+    Console.WriteLine("12. Фильтр по статусу и приоритету");
+    Console.WriteLine("13. Экспорт в JSON");
+    Console.WriteLine("14. Создать проект");
+    Console.WriteLine("15. Список проектов");
     Console.WriteLine("0. Выход");
     Console.Write("Выберите пункт: ");
 
@@ -101,6 +112,26 @@ while (true)
                     Console.WriteLine($"{pair.Key}: {pair.Value}");
                 }
                 break;
+            case "11":
+                Console.Write(dueSoonReport.Render(service.GetAll(), clock.GetLocalNow().DateTime));
+                break;
+            case "12":
+                TaskItemStatus? status = ReadOptionalStatus();
+                TaskPriority? priority = ReadOptionalPriority();
+                PrintTasks(service.Filter(status, priority));
+                break;
+            case "13":
+                string exportPath = Path.Combine(dataFolder, "export", "tasks-export.json");
+                Directory.CreateDirectory(Path.GetDirectoryName(exportPath)!);
+                File.WriteAllText(exportPath, exporter.Export(service.GetAll()));
+                Console.WriteLine($"Экспорт сохранён: {exportPath}");
+                break;
+            case "14":
+                CreateProject();
+                break;
+            case "15":
+                PrintProjects();
+                break;
             default:
                 Console.WriteLine("Неизвестный пункт меню.");
                 break;
@@ -139,7 +170,9 @@ void AddTask()
         dueDate = parsed;
     }
 
-    service.Create(title, priority, dueDate);
+    int? projectId = ReadOptionalProjectId();
+
+    service.Create(title, priority, dueDate, projectId: projectId);
 }
 
 int ReadId()
@@ -151,6 +184,95 @@ int ReadId()
     }
 
     return id;
+}
+
+int? ReadOptionalProjectId()
+{
+    Console.Write("Id проекта (пусто = без проекта): ");
+    string? text = Console.ReadLine();
+    if (string.IsNullOrWhiteSpace(text))
+    {
+        return null;
+    }
+
+    if (!int.TryParse(text.Trim(), out int id))
+    {
+        throw new FormatException("Id проекта должен быть целым числом.");
+    }
+
+    if (projectRepository.GetById(id) is null)
+    {
+        throw new KeyNotFoundException($"Проект #{id} не найден.");
+    }
+
+    return id;
+}
+
+TaskItemStatus? ReadOptionalStatus()
+{
+    Console.Write("Статус (Todo, InProgress, Done, пусто = любой): ");
+    string? text = Console.ReadLine();
+    if (string.IsNullOrWhiteSpace(text))
+    {
+        return null;
+    }
+
+    if (!Enum.TryParse(text.Trim(), true, out TaskItemStatus status) || !Enum.IsDefined(status))
+    {
+        throw new FormatException("Неизвестный статус");
+    }
+
+    return status;
+}
+
+TaskPriority? ReadOptionalPriority()
+{
+    Console.Write("Приоритет (Low, Medium, High, Critical), пусто = любой: ");
+    string? text = Console.ReadLine();
+    if (string.IsNullOrWhiteSpace(text))
+    {
+        return null;
+    }
+
+    if (!Enum.TryParse(text.Trim(), true, out TaskPriority priority) || !Enum.IsDefined(priority))
+    {
+        throw new FormatException("Неизвестный приоритет");
+    }
+
+    return priority;
+}
+
+void CreateProject()
+{
+    Console.Write("Название проекта: ");
+    string name = Console.ReadLine() ?? string.Empty;
+
+    Console.Write("Описание (пусто = без описания): ");
+    string? description = Console.ReadLine();
+
+    var project = new Project(name, string.IsNullOrWhiteSpace(description) ? null : description.Trim())
+    {
+        CreatedAt = clock.GetLocalNow().DateTime
+    };
+
+    projectRepository.Add(project);
+    Console.WriteLine($"Создан проект #{project.Id}: {project.Name}");
+}
+
+void PrintProjects()
+{
+    IReadOnlyList<Project> projects = projectRepository.GetAll();
+    if (projects.Count == 0)
+    {
+        Console.WriteLine("(проектов нет)");
+        return;
+    }
+
+    foreach (Project project in projects)
+    {
+        int taskCount = service.GetAll().Count(t => t.ProjectId == project.Id);
+        Console.WriteLine($"#{project.Id} {project.Name} (задач: {taskCount})");
+    }
 }
 
 void PrintTasks(IReadOnlyList<TaskItem> tasks)

@@ -18,6 +18,8 @@ public sealed class JsonFileTaskRepository : ITaskRepository
 
     private readonly string _filePath;
     private readonly InMemoryTaskRepository _inner;
+    // SemaphoreSlim, а не lock: внутри критической секции есть await
+    private readonly SemaphoreSlim _gate = new(1, 1);
 
     public JsonFileTaskRepository(string filePath)
     {
@@ -30,33 +32,32 @@ public sealed class JsonFileTaskRepository : ITaskRepository
         _inner = new InMemoryTaskRepository(Load());
     }
 
-    public IReadOnlyList<TaskItem> GetAll() => _inner.GetAll();
+    public Task<IReadOnlyList<TaskItem>> GetAllAsync(CancellationToken ct = default) => _inner.GetAllAsync(ct);
 
-    public TaskItem? GetById(int id) => _inner.GetById(id);
+    public Task<TaskItem?> GetByIdAsync(int id, CancellationToken ct = default) => _inner.GetByIdAsync(id, ct);
 
-    public void Add(TaskItem task)
+    public async Task AddAsync(TaskItem task, CancellationToken ct = default)
     {
-        _inner.Add(task);
-        Save();
+        await _inner.AddAsync(task, ct);
+        await SaveAsync(ct);
     }
 
-    public void Update(TaskItem task)
+    public async Task UpdateAsync(TaskItem task, CancellationToken ct = default)
     {
-        _inner.Update(task);
-        Save();
+        await _inner.UpdateAsync(task, ct);
+        await SaveAsync(ct);
     }
 
-    public bool Delete(int id)
+    public async Task<bool> DeleteAsync(int id, CancellationToken ct = default)
     {
-        bool deleted = _inner.Delete(id);
+        bool deleted = await _inner.DeleteAsync(id, ct);
         if (deleted)
         {
-            Save();
+            await SaveAsync(ct);
         }
 
         return deleted;
     }
-
     private List<TaskItem> Load()
     {
         if (!File.Exists(_filePath))
@@ -73,15 +74,24 @@ public sealed class JsonFileTaskRepository : ITaskRepository
         return JsonSerializer.Deserialize<List<TaskItem>>(json, JsonOptions) ?? new List<TaskItem>();
     }
 
-    private void Save()
+    private async Task SaveAsync(CancellationToken ct)
     {
-        string? directory = Path.GetDirectoryName(_filePath);
-        if (!string.IsNullOrEmpty(directory))
+        await _gate.WaitAsync(ct);
+        try
         {
-            Directory.CreateDirectory(directory);
-        }
+            string? directory = Path.GetDirectoryName(_filePath);
+            if (!string.IsNullOrEmpty(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
 
-        string json = JsonSerializer.Serialize(_inner.GetAll(), JsonOptions);
-        File.WriteAllText(_filePath, json);
+            IReadOnlyList<TaskItem> tasks = await _inner.GetAllAsync(ct);
+            await using FileStream stream = File.Create(_filePath);
+            await JsonSerializer.SerializeAsync(stream, tasks, JsonOptions, ct);
+        }
+        finally
+        {
+            _gate.Release();
+        }
     }
 }

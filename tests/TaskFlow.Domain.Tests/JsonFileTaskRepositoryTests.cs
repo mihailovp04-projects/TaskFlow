@@ -7,7 +7,7 @@ namespace TaskFlow.Domain.Tests;
 public class JsonFileTaskRepositoryTests
 {
     [Fact]
-    public void Add_ThenNewInstance_ReadsSameTasksFromFile()
+    public async Task Add_ThenNewInstance_ReadsSameTasksFromFile()
     {
         // Arrange
         string filePath = Path.Combine(Path.GetTempPath(), $"taskflow-{Guid.NewGuid()}.json");
@@ -18,11 +18,11 @@ public class JsonFileTaskRepositoryTests
             task.Start();
 
             // Act
-            first.Add(task);
+            await first.AddAsync(task);
             var second = new JsonFileTaskRepository(filePath);
 
             // Assert
-            var loaded = Assert.Single(second.GetAll());
+            var loaded = Assert.Single(await second.GetAllAsync());
             Assert.Equal(1, loaded.Id);
             Assert.Equal("Проверить JSON", loaded.Title);
             Assert.Equal(TaskPriority.Critical, loaded.Priority);

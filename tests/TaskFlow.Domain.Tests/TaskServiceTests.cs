@@ -1,4 +1,6 @@
-﻿using TaskFlow.Domain.Enums;
+﻿using TaskFlow.Domain.Abstractions;
+using TaskFlow.Domain.Entities;
+using TaskFlow.Domain.Enums;
 using TaskFlow.Domain.Repositories;
 using TaskFlow.Domain.Services;
 using TaskFlow.Domain.Tests.Fakes;
@@ -7,102 +9,86 @@ namespace TaskFlow.Domain.Tests;
 
 public class TaskServiceTests
 {
-    private static readonly DateTime Today = new(2026, 10, 5, 9, 0, 0);
+    private static readonly DateTime Now = new(2026, 10, 24, 9, 0, 0);
 
     private readonly InMemoryTaskRepository _repository = new();
-    private readonly RecordingNotifier _notifier = new();
     private readonly TaskService _service;
 
     public TaskServiceTests()
     {
-        _service = new TaskService(_repository, _notifier, new FixedTimeProvider(Today));
+        _service = new TaskService(_repository, new FixedTimeProvider(Now));
     }
 
     [Fact]
-    public void Create_WithDueDateInPast_ThrowsArgumentException()
+    public async Task CreateAsync_AssignsIdAndCreatedAt()
     {
+        var created = await _service.CreateAsync(new TaskItem("Write tests"));
 
-        DateTime yesterday = Today.AddDays(-1);
-
-        Assert.Throws<ArgumentException>(() => _service.Create("Старая задача", TaskPriority.Low, yesterday));
-        Assert.Empty(_repository.GetAll());
+        Assert.Equal(1, created.Id);
+        Assert.Equal(Now, created.CreatedAt);
+        Assert.Equal(TaskItemStatus.Todo, created.Status);
     }
 
     [Fact]
-    public void Complete_ExistingTask_SavesStatusAndSendsNotification()
+    public async Task ChangeStatusAsync_TodoToInProgress_ChangesStatus()
     {
+        var created = await _service.CreateAsync(new TaskItem("Start me"));
 
-        var task = _service.Create("Подготовить демо", TaskPriority.Medium, Today.AddDays(2));
-        _notifier.Messages.Clear();
+        var changed = await _service.ChangeStatusAsync(created.Id, TaskItemStatus.InProgress);
 
-
-        _service.Complete(task.Id);
-
-        var saved = _repository.GetById(task.Id);
-        Assert.NotNull(saved);
-        Assert.Equal(TaskItemStatus.Done, saved.Status);
-        Assert.Equal(Today, saved.CompletedAt);
-        Assert.Single(_notifier.Messages);
-        Assert.Contains($"#{task.Id}", _notifier.Messages[0]);
+        Assert.NotNull(changed);
+        Assert.Equal(TaskItemStatus.InProgress, changed.Status);
     }
 
     [Fact]
-    public void Start_WhenMaxTasksInProgress_ThrowsInvalidOperationException()
+    public async Task ChangeStatusAsync_ToDone_SetsCompletedAt()
     {
-        // Arrange
-        var first = _service.Create("Задача 1", TaskPriority.Low, null);
-        var second = _service.Create("Задача 2", TaskPriority.Low, null);
-        var third = _service.Create("Задача 3", TaskPriority.Low, null);
-        var fourth = _service.Create("Задача 4", TaskPriority.Low, null);
-        _service.Start(first.Id);
-        _service.Start(second.Id);
-        _service.Start(third.Id);
+        var created = await _service.CreateAsync(new TaskItem("Finish me"));
 
-        // Act + Assert
-        Assert.Throws<InvalidOperationException>(() => _service.Start(fourth.Id));
+        var changed = await _service.ChangeStatusAsync(created.Id, TaskItemStatus.Done);
+
+        Assert.NotNull(changed);
+        Assert.Equal(TaskItemStatus.Done, changed.Status);
+        Assert.Equal(Now, changed.CompletedAt);
     }
 
     [Fact]
-    public void Search_IgnoresCase()
+    public async Task ChangeStatusAsync_DoneToInProgress_Throws()
     {
-        // Arrange
-        _service.Create("Подготовить Демо", TaskPriority.Medium, null);
+        var created = await _service.CreateAsync(new TaskItem("Already done"));
+        await _service.ChangeStatusAsync(created.Id, TaskItemStatus.Done);
 
-        // Act
-        var result = _service.Search("демо");
-
-        // Assert
-        var found = Assert.Single(result);
-        Assert.Equal("Подготовить Демо", found.Title);
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _service.ChangeStatusAsync(created.Id, TaskItemStatus.InProgress));
     }
 
     [Fact]
-    public void Delete_NonExistingId_ReturnsFalseAndDoesNotNotify()
+    public async Task ChangeStatusAsync_UnknownId_ReturnsNull()
     {
-        // Arrange
-        int missingId = 99;
+        var changed = await _service.ChangeStatusAsync(42, TaskItemStatus.Done);
 
-        // Act
-        bool deleted = _service.Delete(missingId);
+        Assert.Null(changed);
+    }
 
-        // Assert
+    [Fact]
+    public async Task GetAllAsync_FiltersByStatusAndSearch()
+    {
+        var api = await _service.CreateAsync(new TaskItem("Write API"));
+        await _service.CreateAsync(new TaskItem("Write docs"));
+        await _service.CreateAsync(new TaskItem("Buy milk"));
+        await _service.ChangeStatusAsync(api.Id, TaskItemStatus.InProgress);
+
+        var result = await _service.GetAllAsync(new TaskFilter(Status: TaskItemStatus.Todo, Search: "write"));
+
+        var single = Assert.Single(result);
+        Assert.Equal("Write docs", single.Title);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_UnknownId_ReturnsFalse()
+    {
+        var deleted = await _service.DeleteAsync(42);
+
         Assert.False(deleted);
-        Assert.Empty(_notifier.Messages);
-    }
-
-    [Fact]
-    public void Filter_ByTodo_ReturnsOnlyTodoTasks()
-    {
-        // Arrange
-        var started = _service.Create("В работе", TaskPriority.Low, null);
-        var todo = _service.Create("Сделать", TaskPriority.Low, null);
-        _service.Start(started.Id);
-
-        // Act
-        var result = _service.Filter(TaskItemStatus.Todo, null );
-
-        // Assert
-        var found = Assert.Single(result);
-        Assert.Equal(todo.Id, found.Id);
     }
 }

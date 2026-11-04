@@ -1,0 +1,110 @@
+@baseUrl = http://localhost:5080
+
+### 1. Список задач
+GET {{baseUrl}}/api/tasks
+Accept: application/json
+
+### 2. Создать проект
+# @name createProject
+POST {{baseUrl}}/api/projects
+Content-Type: application/json
+
+{
+  "name": "TaskFlow",
+  "description": "Учебный проект курса"
+}
+
+### 3. Проект с тем же именем: ожидаем 409
+POST {{baseUrl}}/api/projects
+Content-Type: application/json
+
+{
+  "name": "taskflow"
+}
+
+### 4. Создать задачу в проекте: ожидаем 201 и Location
+# @name createTask
+POST {{baseUrl}}/api/tasks
+Content-Type: application/json
+
+{
+  "title": "Write the API",
+  "description": "Week 3 lab",
+  "priority": "High",
+  "dueDate": "2026-11-01T18:00:00Z",
+  "projectId": {{createProject.response.body.$.id}}
+}
+
+### 5. Прочитать созданную задачу по заголовку Location
+GET {{createTask.response.headers.Location}}
+
+### 6. Невалидная задача: ожидаем 400
+POST {{baseUrl}}/api/tasks
+Content-Type: application/json
+
+{
+  "title": ""
+}
+
+### 7. Неизвестный приоритет: ожидаем 400
+POST {{baseUrl}}/api/tasks
+Content-Type: application/json
+
+{
+  "title": "Bad priority",
+  "priority": "Urgent"
+}
+
+### 8. Фильтрация по статусу, приоритету и тексту
+GET {{baseUrl}}/api/tasks?status=Todo&priority=High&search=api
+
+### 9. Обновить задачу целиком: ожидаем 204
+PUT {{baseUrl}}/api/tasks/{{createTask.response.body.$.id}}
+Content-Type: application/json
+
+{
+  "title": "Write the API (updated)",
+  "description": "Week 3 lab",
+  "priority": "Critical",
+  "dueDate": "2026-11-02T18:00:00Z",
+  "projectId": {{createProject.response.body.$.id}}
+}
+
+### 10. Начать работу: ожидаем 204
+PATCH {{baseUrl}}/api/tasks/{{createTask.response.body.$.id}}/status
+Content-Type: application/json
+
+{
+  "status": "InProgress"
+}
+
+### 11. Повторно начать: ожидаем 409
+PATCH {{baseUrl}}/api/tasks/{{createTask.response.body.$.id}}/status
+Content-Type: application/json
+
+{
+  "status": "InProgress"
+}
+
+### 12. Завершить: ожидаем 204
+PATCH {{baseUrl}}/api/tasks/{{createTask.response.body.$.id}}/status
+Content-Type: application/json
+
+{
+  "status": "Done"
+}
+
+### 13. Задачи проекта
+GET {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}/tasks
+
+### 14. Несуществующая задача: ожидаем 404
+GET {{baseUrl}}/api/tasks/999999
+
+### 15. Удалить задачу: ожидаем 204
+DELETE {{baseUrl}}/api/tasks/{{createTask.response.body.$.id}}
+
+### 16. Время жизни сервисов
+GET {{baseUrl}}/api/diagnostics/lifetimes
+
+### 17. Необработанное исключение: ожидаем 500 и ProblemDetails
+GET {{baseUrl}}/api/diagnostics/boom

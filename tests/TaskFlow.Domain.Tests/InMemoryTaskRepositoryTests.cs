@@ -6,7 +6,7 @@ namespace TaskFlow.Domain.Tests;
 public class InMemoryTaskRepositoryTests
 {
     [Fact]
-    public void Add_ThreeTasks_AssignsSequentialIds()
+    public async Task Add_ThreeTasks_AssignsSequentialIds()
     {
         // Arrange
         var repository = new InMemoryTaskRepository();
@@ -15,9 +15,9 @@ public class InMemoryTaskRepositoryTests
         var third = new TaskItem("Третья");
 
         // Act
-        repository.Add(first);
-        repository.Add(second);
-        repository.Add(third);
+        await repository.AddAsync(first);
+        await repository.AddAsync (second);
+        await repository.AddAsync(third);
 
         // Assert
         Assert.Equal(1, first.Id);

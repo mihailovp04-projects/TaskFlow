@@ -4,122 +4,79 @@ using TaskFlow.Domain.Enums;
 
 namespace TaskFlow.Domain.Services;
 
-public sealed class TaskService : ITaskService
+public sealed class TaskService(ITaskRepository repository, TimeProvider timeProvider) : ITaskService
 {
-    public const int MaxTasksInProgress = 3;
-
-    private readonly ITaskRepository _repository;
-    private readonly INotifier _notifier;
-    private readonly TimeProvider _clock;
-
-    public TaskService(ITaskRepository repository, INotifier notifier, TimeProvider clock)
+    public async Task<IReadOnlyList<TaskItem>> GetAllAsync(TaskFilter filter, CancellationToken ct = default)
     {
-        ArgumentNullException.ThrowIfNull(repository);
-        ArgumentNullException.ThrowIfNull(notifier);
-        ArgumentNullException.ThrowIfNull(clock);
+        ArgumentNullException.ThrowIfNull(filter);
 
-        _repository = repository;
-        _notifier = notifier;
-        _clock = clock;
-    }
+        var tasks = await repository.GetAllAsync(ct);
+        IEnumerable<TaskItem> query = tasks;
 
-    private DateTime Now => _clock.GetLocalNow().DateTime;
-
-    public TaskItem Create(string title, TaskPriority priority, DateTime? dueDate, string? description = null, int? projectId = null)
-    {
-        if (dueDate is not null && dueDate.Value.Date < Now.Date)
+        if (filter.Status is { } status)
+            query = query.Where(t => t.Status == status);
+        if (filter.Priority is { } priority)
+            query = query.Where(t => t.Priority == priority);
+        if (filter.ProjectId is { } projectId)
+            query = query.Where(t => t.ProjectId == projectId);
+        if (!string.IsNullOrWhiteSpace(filter.Search))
         {
-            throw new ArgumentException("Срок не может быть в прошлом.", nameof(dueDate));
+            var term = filter.Search.Trim();
+            query = query.Where(t =>
+                t.Title.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+                (t.Description?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false));
         }
 
-        var task = new TaskItem(title, priority, dueDate, description)
-        {
-            CreatedAt = Now,
-            ProjectId = projectId
-        };
+        return query.OrderBy(t => t.Id).ToList();
+    }
 
-        _repository.Add(task);
-        _notifier.Notify($"Создана задача #{task.Id}: {task.Title}");
+    public Task<TaskItem?> GetByIdAsync(int id, CancellationToken ct = default) =>
+        repository.GetByIdAsync(id, ct);
+
+    public async Task<TaskItem> CreateAsync(TaskItem task, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(task);
+        task.CreatedAt = timeProvider.GetUtcNow().UtcDateTime;
+        await repository.AddAsync(task, ct);
         return task;
     }
 
-    public IReadOnlyList<TaskItem> GetAll() =>
-        _repository.GetAll()
-            .OrderBy(t => t.Status)
-            .ThenByDescending(t => t.Priority)
-            .ThenBy(t => t.Id)
-            .ToList();
-
-    public IReadOnlyList<TaskItem> Search(string text)
+    public async Task<bool> UpdateAsync(TaskItem task, CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(text))
+        ArgumentNullException.ThrowIfNull(task);
+        var existing = await repository.GetByIdAsync(task.Id, ct);
+        if (existing is null)
+            return false;
+
+        await repository.UpdateAsync(task, ct);
+        return true;
+    }
+
+    public async Task<TaskItem?> ChangeStatusAsync(int id, TaskItemStatus newStatus, CancellationToken ct = default)
+    {
+        var task = await repository.GetByIdAsync(id, ct);
+        if (task is null)
+            return null;
+
+        switch (newStatus)
         {
-            return GetAll();
+            case TaskItemStatus.InProgress:
+                task.Start();
+                break;
+            case TaskItemStatus.Done:
+                task.Complete(timeProvider.GetUtcNow().UtcDateTime);
+                break;
+            case TaskItemStatus.Todo:
+                task.Reopen();
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(newStatus), newStatus, "Unknown task status.");
         }
 
-        string term = text.Trim();
-        return _repository.GetAll()
-            .Where(t => t.Title.Contains(term, StringComparison.OrdinalIgnoreCase))
-            .OrderBy(t => t.Id)
-            .ToList();
+        await repository.UpdateAsync(task, ct);
+        return task;
     }
 
-    public IReadOnlyList<TaskItem> Filter(TaskItemStatus? status, TaskPriority? priority) =>
-    _repository.GetAll()
-        .Where(t => (status is null || t.Status == status)
-                 && (priority is null || t.Priority == priority))
-        .OrderBy(t => t.Id)
-        .ToList();
-
-    public void Start(int id)
-    {
-        TaskItem task = GetRequired(id);
-
-        int inProgress = _repository.GetAll().Count(t => t.Status == TaskItemStatus.InProgress);
-        if (inProgress >= MaxTasksInProgress)
-        {
-            throw new InvalidOperationException($"Нельзя держать в работе больше {MaxTasksInProgress} задач одновременно.");
-        }
-
-        task.Start();
-        _repository.Update(task);
-        _notifier.Notify($"Задача #{task.Id} взята в работу");
-    }
-
-    public void Complete(int id)
-    {
-        TaskItem task = GetRequired(id);
-        task.Complete(Now);
-        _repository.Update(task);
-        _notifier.Notify($"Задача #{task.Id} выполнена");
-    }
-
-    public void Reopen(int id)
-    {
-        TaskItem task = GetRequired(id);
-        task.Reopen();
-        _repository.Update(task);
-        _notifier.Notify($"Задача #{task.Id} возвращена в работу");
-    }
-
-    public bool Delete(int id)
-    {
-        bool deleted = _repository.Delete(id);
-        if (deleted)
-        {
-            _notifier.Notify($"Задача #{id} удалена");
-        }
-
-        return deleted;
-    }
-
-    public bool HasOverdue() => _repository.GetAll().Any(t => t.IsOverdue(Now));
-
-    public IReadOnlyDictionary<TaskItemStatus, int> CountByStatus() =>
-        _repository.GetAll()
-            .GroupBy(t => t.Status)
-            .ToDictionary(g => g.Key, g => g.Count());
-
-    private TaskItem GetRequired(int id) =>
-        _repository.GetById(id) ?? throw new KeyNotFoundException($"Задача #{id} не найдена.");
+    public Task<bool> DeleteAsync(int id, CancellationToken ct = default) =>
+        repository.DeleteAsync(id, ct);
 }

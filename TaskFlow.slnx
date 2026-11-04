@@ -1,7 +1,8 @@
 <Solution>
   <Folder Name="/src/">
-    <Project Path="src/TaskFlow.ConsoleApp/TaskFlow.ConsoleApp.csproj" />
+    <Project Path="src/TaskFlow.Api/TaskFlow.Api.csproj" />
     <Project Path="src/TaskFlow.Domain/TaskFlow.Domain.csproj" />
+    <Project Path="src/TaskFlow.Shared/TaskFlow.Shared.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/TaskFlow.Domain.Tests/TaskFlow.Domain.Tests.csproj" />

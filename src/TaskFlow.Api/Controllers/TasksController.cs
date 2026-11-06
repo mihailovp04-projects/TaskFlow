@@ -10,6 +10,7 @@ namespace TaskFlow.Api.Controllers;
 [Route("api/tasks")]
 public sealed class TasksController(
     ITaskService taskService,
+    IProjectService projectService,
     TimeProvider timeProvider,
     ILogger<TasksController> logger) : ControllerBase
 {
@@ -49,11 +50,17 @@ public sealed class TasksController(
         [FromBody] CreateTaskRequest request,
         CancellationToken cancellationToken)
     {
+        if(!await ProjectExistsAsync(request.ProjectId, cancellationToken))
+        {
+            ModelState.AddModelError(nameof(request.ProjectId), $"Project {request.ProjectId} does not exist.");
+            return ValidationProblem(ModelState);
+        }
         var created = await taskService.CreateAsync(request.ToEntity(), cancellationToken);
         logger.LogInformation("Task {TaskId} created with priority {Priority}", created.Id, created.Priority);
 
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, created.ToDto(Now()));
     }
+        
 
     [HttpPut("{id:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -64,9 +71,16 @@ public sealed class TasksController(
         [FromBody] UpdateTaskRequest request,
         CancellationToken cancellationToken)
     {
+        
         var task = await taskService.GetByIdAsync(id, cancellationToken);
         if (task is null)
             return NotFound();
+
+        if (!await ProjectExistsAsync(request.ProjectId, cancellationToken))
+        {
+            ModelState.AddModelError(nameof(request.ProjectId), $"Project {request.ProjectId} does not exist.");
+            return ValidationProblem(ModelState);
+        }
 
         request.ApplyTo(task);
         await taskService.UpdateAsync(task, cancellationToken);
@@ -121,4 +135,14 @@ public sealed class TasksController(
     }
 
     private DateTime Now() => timeProvider.GetUtcNow().UtcDateTime;
+
+    private async Task<bool> ProjectExistsAsync(int? projectId, CancellationToken cancellationToken)
+    {
+        if (projectId is null)
+        {
+            return true;
+        }
+        var project = await projectService.GetByIdAsync(projectId.Value, cancellationToken);
+        return project is not null;
+    }
 }

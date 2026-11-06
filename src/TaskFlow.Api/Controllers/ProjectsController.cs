@@ -71,4 +71,55 @@ public sealed class ProjectsController(
         var result = tasks.Select(t => t.ToDto(now)).ToList();
         return Ok(result);
     }
+
+    [HttpPut("{id:int}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Update(
+    int id,
+    [FromBody] UpdateProjectRequest request,
+    CancellationToken cancellationToken)
+    {
+        try
+        {
+            var updated = await projectService.UpdateAsync(id, request.Name, request.Description, cancellationToken);
+            if (!updated)
+                return NotFound();
+
+            logger.LogInformation("Project {ProjectId} updated", id);
+            return NoContent();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status409Conflict,
+                title: "Project name already exists",
+                detail: ex.Message);
+        }
+    }
+    [HttpDelete("{id:int}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var deleted = await projectService.DeleteAsync(id, cancellationToken);
+            if (!deleted)
+                return NotFound();
+
+            logger.LogInformation("Project {ProjectId} deleted", id);
+            return NoContent();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status409Conflict,
+                title: "Project has tasks",
+                detail: ex.Message);
+        }
+    }
 }

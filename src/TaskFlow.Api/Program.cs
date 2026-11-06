@@ -10,6 +10,7 @@ using TaskFlow.Domain.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+
 builder.Services
     .AddControllers()
     .AddJsonOptions(options =>
@@ -17,11 +18,16 @@ builder.Services
 
 builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
-builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
 builder.Services
     .AddOptions<RequestTimingOptions>()
     .Bind(builder.Configuration.GetSection(RequestTimingOptions.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
+builder.Services
+    .AddOptions<DiagnosticsOptions>()
+    .Bind(builder.Configuration.GetSection(DiagnosticsOptions.SectionName))
     .ValidateDataAnnotations()
     .ValidateOnStart();
 
@@ -36,10 +42,19 @@ builder.Services.AddScoped<ScopedOperation>();
 builder.Services.AddSingleton<SingletonOperation>();
 builder.Services.AddTransient<OperationReporter>();
 
+builder.Services.AddSingleton<ITagRepository, InMemoryTagRepository>();
+builder.Services.AddScoped<ITagService, TagService>();
+
+builder.Services.AddExceptionHandler<ArgumentExceptionHandler>();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+
 var app = builder.Build();
+
+app.UseMiddleware<CorrelationIdMiddleware>();
 
 app.UseMiddleware<RequestTimingMiddleware>();
 app.UseExceptionHandler();
+
 
 if (app.Environment.IsDevelopment())
 {
@@ -49,5 +64,6 @@ if (app.Environment.IsDevelopment())
 
 app.UseAuthorization();
 app.MapControllers();
+
 
 app.Run();

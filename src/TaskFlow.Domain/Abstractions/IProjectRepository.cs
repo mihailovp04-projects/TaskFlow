@@ -8,4 +8,6 @@ public interface IProjectRepository
     Task<Project?> GetByIdAsync(int id, CancellationToken ct = default);
     Task<Project?> GetByNameAsync(string name, CancellationToken ct = default);
     Task AddAsync(Project project, CancellationToken ct = default);
+    Task UpdateAsync(Project project, CancellationToken ct = default);
+    Task<bool> DeleteAsync(int id, CancellationToken ct = default);
 }

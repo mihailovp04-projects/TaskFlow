@@ -108,3 +108,130 @@ GET {{baseUrl}}/api/diagnostics/lifetimes
 
 ### 17. Необработанное исключение: ожидаем 500 и ProblemDetails
 GET {{baseUrl}}/api/diagnostics/boom
+
+### 18. Задача с несуществующим проектом: ожидаем 400
+POST {{baseUrl}}/api/tasks
+Content-Type: application/json
+
+{
+  "title": "Unknown project",
+  "projectId": 999999
+}
+
+### 19. Второй проект
+# @name createProject2
+POST {{baseUrl}}/api/projects
+Content-Type: application/json
+
+{
+  "name": "Second project"
+}
+
+### 20. Переименовать проект в то же имя другим регистром: ожидаем 204
+PUT {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}
+Content-Type: application/json
+
+{
+  "name": "TASKFLOW",
+  "description": "Учебный проект курса"
+}
+
+### 21. Переименовать в имя другого проекта: ожидаем 409
+PUT {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}
+Content-Type: application/json
+
+{
+  "name": "second project"
+}
+
+### 22. Изменить несуществующий проект: ожидаем 404
+PUT {{baseUrl}}/api/projects/999999
+Content-Type: application/json
+
+{
+  "name": "Nobody"
+}
+
+### 23. Пустое имя проекта: ожидаем 400
+PUT {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}
+Content-Type: application/json
+
+{
+  "name": ""
+}
+
+### 24. Задача во втором проекте
+POST {{baseUrl}}/api/tasks
+Content-Type: application/json
+
+{
+  "title": "Blocker",
+  "projectId": {{createProject2.response.body.$.id}}
+}
+
+### 25. Удалить проект с задачами: ожидаем 409
+DELETE {{baseUrl}}/api/projects/{{createProject2.response.body.$.id}}
+
+### 26. Пустой проект для удаления
+# @name createProject3
+POST {{baseUrl}}/api/projects
+Content-Type: application/json
+
+{
+  "name": "To delete"
+}
+
+### 27. Удалить пустой проект: ожидаем 204
+DELETE {{baseUrl}}/api/projects/{{createProject3.response.body.$.id}}
+
+### 28. Удалить несуществующий проект: ожидаем 404
+DELETE {{baseUrl}}/api/projects/999999
+
+### 29. Список меток (по имени): ожидаем 200
+GET {{baseUrl}}/api/tags
+
+### 30. Создать метку: ожидаем 201 и Location
+# @name createTag
+POST {{baseUrl}}/api/tags
+Content-Type: application/json
+
+{
+  "name": "urgent"
+}
+
+### 31. Прочитать метку по Location: ожидаем 200
+GET {{createTag.response.headers.Location}}
+
+### 32. Дубликат метки другим регистром: ожидаем 409
+POST {{baseUrl}}/api/tags
+Content-Type: application/json
+
+{
+  "name": "URGENT"
+}
+
+### 33. Пустое имя метки: ожидаем 400
+POST {{baseUrl}}/api/tags
+Content-Type: application/json
+
+{
+  "name": ""
+}
+
+### 34. Имя метки длиннее 50 символов: ожидаем 400
+POST {{baseUrl}}/api/tags
+Content-Type: application/json
+
+{
+  "name": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+}
+
+### 35. Несуществующая метка: ожидаем 404
+GET {{baseUrl}}/api/tags/999999
+
+### 36. ArgumentException: ожидаем 400 "Invalid argument"
+GET {{baseUrl}}/api/diagnostics/boom?kind=argument
+
+### 37. Свой X-Correlation-Id: ожидаем тот же заголовок в ответе
+GET {{baseUrl}}/api/tasks
+X-Correlation-Id: demo-123

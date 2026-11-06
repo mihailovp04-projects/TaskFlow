@@ -67,6 +67,48 @@ check 500 GET /api/diagnostics/boom
 check 200 GET /openapi/v1.json
 check 200 GET /scalar/v1
 
+# --- Домашнее задание недели 3 ---
+
+# Задача с несуществующим проектом
+check 400 POST /api/tasks '{"title":"Unknown project","projectId":999999}'
+HW_TASK_ID=$(create /api/tasks "{\"title\":\"HW task $SUFFIX\"}")
+check 400 PUT "/api/tasks/$HW_TASK_ID" '{"title":"x","projectId":999999}'
+
+# Изменение и удаление проектов
+P_ALPHA=$(create /api/projects "{\"name\":\"HW Alpha $SUFFIX\"}")
+P_BETA=$(create /api/projects "{\"name\":\"HW Beta $SUFFIX\"}")
+check 204 PUT "/api/projects/$P_ALPHA" "{\"name\":\"hw alpha $SUFFIX\"}"
+check 409 PUT "/api/projects/$P_ALPHA" "{\"name\":\"HW BETA $SUFFIX\"}"
+check 400 PUT "/api/projects/$P_ALPHA" '{"name":""}'
+check 404 PUT /api/projects/999999 '{"name":"Nobody"}'
+create /api/tasks "{\"title\":\"Blocker $SUFFIX\",\"projectId\":$P_ALPHA}" > /dev/null
+check 409 DELETE "/api/projects/$P_ALPHA"
+check 204 DELETE "/api/projects/$P_BETA"
+check 404 DELETE "/api/projects/$P_BETA"
+
+# Метки
+check 200 GET /api/tags
+check 201 POST /api/tags "{\"name\":\"first$SUFFIX\"}"
+TAG_ID=$(create /api/tags "{\"name\":\"second$SUFFIX\"}")
+check 200 GET "/api/tags/$TAG_ID"
+check 404 GET /api/tags/999999
+check 409 POST /api/tags "{\"name\":\"SECOND$SUFFIX\"}"
+check 400 POST /api/tags '{"name":""}'
+check 400 POST /api/tags "{\"name\":\"$(printf 'a%.0s' {1..51})\"}"
+
+# Второй обработчик исключений
+check 400 GET "/api/diagnostics/boom?kind=argument"
+
+# Заголовок X-Correlation-Id возвращается в ответе
+CORRELATION=$(curl -s -o /dev/null -D - -H "X-Correlation-Id: smoke-$SUFFIX" "$BASE_URL/api/tasks" \
+  | tr -d '\r' | awk 'tolower($1) == "x-correlation-id:" { print $2 }')
+if [ "$CORRELATION" = "smoke-$SUFFIX" ]; then
+  echo "OK   header X-Correlation-Id: $CORRELATION"
+else
+  echo "FAIL header X-Correlation-Id (got '$CORRELATION')"
+  FAILED=1
+fi
+
 echo
 if [ "$FAILED" -eq 0 ]; then
   echo "All checks passed"

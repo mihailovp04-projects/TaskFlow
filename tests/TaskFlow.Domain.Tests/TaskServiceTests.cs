@@ -91,4 +91,39 @@ public class TaskServiceTests
 
         Assert.False(deleted);
     }
+    [Fact]
+    public async Task ChangeStatusAsync_InProgressToTodo_Throws()
+    {
+        var created = await _service.CreateAsync(new TaskItem("In progress"));
+        await _service.ChangeStatusAsync(created.Id, TaskItemStatus.InProgress);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _service.ChangeStatusAsync(created.Id, TaskItemStatus.Todo));
+    }
+
+    [Fact]
+    public async Task ChangeStatusAsync_DoneToTodo_ResetsCompletedAt()
+    {
+        var created = await _service.CreateAsync(new TaskItem("Reopen me"));
+        await _service.ChangeStatusAsync(created.Id, TaskItemStatus.Done);
+
+        var changed = await _service.ChangeStatusAsync(created.Id, TaskItemStatus.Todo);
+
+        Assert.NotNull(changed);
+        Assert.Equal(TaskItemStatus.Todo, changed.Status);
+        Assert.Null(changed.CompletedAt);
+    }
+
+    [Fact]
+    public async Task ChangeStatusAsync_InProgressToDone_IsAllowed()
+    {
+        var created = await _service.CreateAsync(new TaskItem("Finish from progress"));
+        await _service.ChangeStatusAsync(created.Id, TaskItemStatus.InProgress);
+
+        var changed = await _service.ChangeStatusAsync(created.Id, TaskItemStatus.Done);
+
+        Assert.NotNull(changed);
+        Assert.Equal(TaskItemStatus.Done, changed.Status);
+        Assert.Equal(Now, changed.CompletedAt);
+    }
 }

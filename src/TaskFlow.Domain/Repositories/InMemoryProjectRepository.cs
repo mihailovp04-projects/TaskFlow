@@ -53,4 +53,31 @@ public sealed class InMemoryProjectRepository : IProjectRepository
         }
         return Task.CompletedTask;
     }
+    public Task UpdateAsync(Project project, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(project);
+        ct.ThrowIfCancellationRequested();
+        lock (_sync)
+        {
+            int index = _projects.FindIndex(p => p.Id == project.Id);
+            if (index < 0)
+            {
+                throw new KeyNotFoundException($"Проект #{project.Id} не найден.");
+            }
+
+            _projects[index] = project;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public Task<bool> DeleteAsync(int id, CancellationToken ct = default)
+    {
+        ct.ThrowIfCancellationRequested();
+        lock (_sync)
+        {
+            bool removed = _projects.RemoveAll(t => t.Id == id) > 0;
+            return Task.FromResult(removed);
+        }
+    }
 }

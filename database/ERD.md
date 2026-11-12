@@ -9,6 +9,10 @@ erDiagram
     Tags ||--o{ TaskTags : "marks"
     Tasks ||--o{ TaskComments : "has"
     Users ||--o{ TaskComments : "writes"
+    Tasks ||--o{ TimeEntries : "has logged time"
+    Users ||--o{ TimeEntries : "logs"
+    TimeEntries ||--o{ TimeEntryActivities : "has"
+    Activities ||--o{ TimeEntryActivities : "describes"
 
     Users {
         int Id PK
@@ -43,5 +47,21 @@ erDiagram
         int TaskId FK
         int AuthorId FK
         nvarchar Body
+    }
+    TimeEntries {
+        int Id PK
+        int TaskId FK
+        int UserId FK
+        date WorkDate
+        decimal Hours
+        nvarchar Note
+    }
+    Activities {
+        int Id PK
+        nvarchar Name UK
+    }
+    TimeEntryActivities {
+        int TimeEntryId PK
+        int ActivityId PK
     }
 ```

@@ -10,4 +10,8 @@ public sealed class CreateProjectRequest
 
     [StringLength(2000)]
     public string? Description { get; set; }
+
+    [RegularExpression("^#[0-9A-Fa-f]{6}$")]
+    public string? Color { get; set; }
+
 }

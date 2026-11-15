@@ -235,3 +235,45 @@ GET {{baseUrl}}/api/diagnostics/boom?kind=argument
 ### 37. Свой X-Correlation-Id: ожидаем тот же заголовок в ответе
 GET {{baseUrl}}/api/tasks
 X-Correlation-Id: demo-123
+
+@host = http://localhost:5080
+
+### Список проектов
+GET {{host}}/api/projects
+
+### Один проект
+GET {{host}}/api/projects/2
+
+### Задачи проекта
+GET {{host}}/api/projects/2/tasks
+
+### Создать проект
+POST {{host}}/api/projects
+Content-Type: application/json
+
+{
+  "name": "Week 5 demo",
+  "description": "Created through EF Core",
+  "color": "#1E88E5"
+}
+
+### Дубликат имени: ожидается 409
+POST {{host}}/api/projects
+Content-Type: application/json
+
+{
+  "name": "Week 5 demo"
+}
+
+### Неверный цвет: ожидается 400
+POST {{host}}/api/projects
+Content-Type: application/json
+
+{
+  "name": "Bad color",
+  "color": "blue"
+}
+
+### Несуществующий проект: ожидается 404
+GET {{host}}/api/projects/999/tasks
+

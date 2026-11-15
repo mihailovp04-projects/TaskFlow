@@ -1,3 +1,3 @@
 ﻿namespace TaskFlow.Shared.Dtos;
 
-public sealed record ProjectDto(int Id, string Name, string? Description, DateTime CreatedAt);
+public sealed record ProjectDto(int Id, string Name, string? Description, DateTime CreatedAt, string? Color);

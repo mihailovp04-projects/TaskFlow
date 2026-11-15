@@ -73,6 +73,10 @@ public class TaskItem : BaseEntity
     [JsonIgnore]
     public Project? Project { get; set; }
 
+    [JsonIgnore]
+    public List<Tag> Tags { get; } = new();
+
+
     public void Start()
     {
         if (Status != TaskItemStatus.Todo)

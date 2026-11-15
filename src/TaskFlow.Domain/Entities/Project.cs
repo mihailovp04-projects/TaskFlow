@@ -5,6 +5,10 @@ namespace TaskFlow.Domain.Entities;
 public class Project : BaseEntity
 {
     public const int NameMaxLength = 100;
+    public const int DescriptionMaxLength = 2000;
+    public const int ColorMaxLength = 7;
+    // Цвет метки проекта в формате #RRGGBB
+    public string? Color { get; set; }
 
     private string _name = string.Empty;
 

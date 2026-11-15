@@ -7,8 +7,22 @@ using TaskFlow.Api.Options;
 using TaskFlow.Domain.Abstractions;
 using TaskFlow.Domain.Repositories;
 using TaskFlow.Domain.Services;
+using Microsoft.EntityFrameworkCore;
+using TaskFlow.Infrastructure.Data;
+using TaskFlow.Infrastructure.Repositories;
+
+
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Строка подключения приходит из user-secrets (Development) или переменной окружения (Docker, неделя 9)
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' is not configured.");
+
+// AddDbContext регистрирует контекст как Scoped: один экземпляр на HTTP-запрос
+builder.Services.AddDbContext<TaskFlowDbContext>(options =>
+    options.UseSqlServer(connectionString));
+
 
 
 builder.Services
@@ -32,8 +46,8 @@ builder.Services
     .ValidateOnStart();
 
 builder.Services.AddSingleton(TimeProvider.System);
-builder.Services.AddSingleton<ITaskRepository, InMemoryTaskRepository>();
-builder.Services.AddSingleton<IProjectRepository, InMemoryProjectRepository>();
+builder.Services.AddScoped<ITaskRepository, EfTaskRepository>();
+builder.Services.AddScoped<IProjectRepository, EfProjectRepository>();
 builder.Services.AddScoped<ITaskService, TaskService>();
 builder.Services.AddScoped<IProjectService, ProjectService>();
 
@@ -60,7 +74,13 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
     app.MapScalarApiReference();
+
+    // Демонстрационные данные только в Development; DbContext Scoped, поэтому нужен scope
+    await using var scope = app.Services.CreateAsyncScope();
+    var db = scope.ServiceProvider.GetRequiredService<TaskFlowDbContext>();
+    await DbSeeder.SeedAsync(db);
 }
+
 
 app.UseAuthorization();
 app.MapControllers();

@@ -1,19 +1,25 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
-  <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+	  <UserSecretsId>a99c3df3-6573-4bcf-8644-aab774d55c3b</UserSecretsId>
   </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.14" />
-    <PackageReference Include="Scalar.AspNetCore" Version="2.18.7" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.14" />
+		<PackageReference Include="Scalar.AspNetCore" Version="2.18.7" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.*">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+	</ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\TaskFlow.Domain\TaskFlow.Domain.csproj" />
-    <ProjectReference Include="..\TaskFlow.Shared\TaskFlow.Shared.csproj" />
-  </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\TaskFlow.Domain\TaskFlow.Domain.csproj" />
+		<ProjectReference Include="..\TaskFlow.Infrastructure\TaskFlow.Infrastructure.csproj" />
+		<ProjectReference Include="..\TaskFlow.Shared\TaskFlow.Shared.csproj" />
+	</ItemGroup>
 
 </Project>

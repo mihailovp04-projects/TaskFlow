@@ -159,7 +159,8 @@ namespace TaskFlow.Infrastructure.Migrations
 
                     b.HasIndex("ProjectId");
 
-                    b.HasIndex("Status");
+                    b.HasIndex("Status", "DueDate")
+                        .HasDatabaseName("IX_Tasks_Status_DueDate");
 
                     b.ToTable("Tasks", (string)null);
                 });
@@ -176,7 +177,7 @@ namespace TaskFlow.Infrastructure.Migrations
 
                     b.HasIndex("TagId");
 
-                    b.ToTable("TaskItemTags", (string)null);
+                    b.ToTable("TaskItemTags");
                 });
 
             modelBuilder.Entity("TaskFlow.Domain.Entities.TaskItem", b =>

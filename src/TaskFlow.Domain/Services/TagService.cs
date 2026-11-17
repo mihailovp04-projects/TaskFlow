@@ -20,10 +20,15 @@ public sealed class TagService(
 
         var existing = await repository.GetByNameAsync(tag.Name, ct);
         if (existing is not null)
-            throw new InvalidOperationException($"A project named '{tag.Name}' already exists.");
+            throw new InvalidOperationException($"A tag named '{tag.Name}' already exists.");
 
         tag.CreatedAt = timeProvider.GetUtcNow().UtcDateTime;
         await repository.AddAsync(tag, ct);
         return tag;
     }
+    public Task<IReadOnlyList<TagSummary>> GetSummariesAsync(CancellationToken ct = default) =>
+    repository.GetSummariesAsync(ct);
+
+    public Task<TagSummary?> GetSummaryByIdAsync(int id, CancellationToken ct = default) =>
+    repository.GetSummaryByIdAsync(id, ct);
 }

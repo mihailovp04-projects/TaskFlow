@@ -6,28 +6,10 @@ namespace TaskFlow.Domain.Services;
 
 public sealed class TaskService(ITaskRepository repository, TimeProvider timeProvider) : ITaskService
 {
-    public async Task<IReadOnlyList<TaskItem>> GetAllAsync(TaskFilter filter, CancellationToken ct = default)
+    public Task<IReadOnlyList<TaskItem>> GetAllAsync(TaskFilter filter, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(filter);
-
-        var tasks = await repository.GetAllAsync(ct);
-        IEnumerable<TaskItem> query = tasks;
-
-        if (filter.Status is { } status)
-            query = query.Where(t => t.Status == status);
-        if (filter.Priority is { } priority)
-            query = query.Where(t => t.Priority == priority);
-        if (filter.ProjectId is { } projectId)
-            query = query.Where(t => t.ProjectId == projectId);
-        if (!string.IsNullOrWhiteSpace(filter.Search))
-        {
-            var term = filter.Search.Trim();
-            query = query.Where(t =>
-                t.Title.Contains(term, StringComparison.OrdinalIgnoreCase) ||
-                (t.Description?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false));
-        }
-
-        return query.OrderBy(t => t.Id).ToList();
+        return repository.SearchAsync(filter, ct);
     }
 
     public Task<TaskItem?> GetByIdAsync(int id, CancellationToken ct = default) =>
@@ -76,6 +58,8 @@ public sealed class TaskService(ITaskRepository repository, TimeProvider timePro
         await repository.UpdateAsync(task, ct);
         return task;
     }
+    public Task<TaskStats> GetStatsAsync(CancellationToken ct = default) =>
+    repository.GetStatsAsync(timeProvider.GetUtcNow().UtcDateTime, ct);
 
     public Task<bool> DeleteAsync(int id, CancellationToken ct = default) =>
         repository.DeleteAsync(id, ct);

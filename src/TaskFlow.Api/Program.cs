@@ -56,8 +56,9 @@ builder.Services.AddScoped<ScopedOperation>();
 builder.Services.AddSingleton<SingletonOperation>();
 builder.Services.AddTransient<OperationReporter>();
 
-builder.Services.AddSingleton<ITagRepository, InMemoryTagRepository>();
+builder.Services.AddScoped<ITagRepository, EfTagRepository>();
 builder.Services.AddScoped<ITagService, TagService>();
+builder.Services.AddScoped<ITaskTagService, TaskTagService>();
 
 builder.Services.AddExceptionHandler<ArgumentExceptionHandler>();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();

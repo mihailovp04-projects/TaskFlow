@@ -27,7 +27,7 @@ public sealed class ProjectService(
         await repository.AddAsync(project, ct);
         return project;
     }
-    public async Task<bool> UpdateAsync(int id, string name, string? description, CancellationToken ct = default)
+    public async Task<bool> UpdateAsync(int id, string name, string? description, string? color = null, CancellationToken ct = default)
     {
         var project = await repository.GetByIdAsync(id, ct);
         if (project is null)
@@ -39,6 +39,7 @@ public sealed class ProjectService(
 
         project.Name = name;
         project.Description = description;
+        project.Color = color;
         await repository.UpdateAsync(project, ct);
         return true;
     }

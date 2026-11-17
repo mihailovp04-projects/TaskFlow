@@ -9,4 +9,7 @@ public interface ITaskRepository
     Task AddAsync(TaskItem task, CancellationToken ct = default);
     Task UpdateAsync(TaskItem task, CancellationToken ct = default);
     Task<bool> DeleteAsync(int id, CancellationToken ct = default);
+
+    Task<IReadOnlyList<TaskItem>> SearchAsync(TaskFilter filter, CancellationToken ct = default);
+    Task<TaskStats> GetStatsAsync(DateTime now, CancellationToken ct = default);
 }

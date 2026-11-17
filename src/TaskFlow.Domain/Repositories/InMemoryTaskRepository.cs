@@ -1,5 +1,6 @@
 ﻿using TaskFlow.Domain.Abstractions;
 using TaskFlow.Domain.Entities;
+using TaskFlow.Domain.Enums;
 
 namespace TaskFlow.Domain.Repositories;
 
@@ -26,6 +27,31 @@ public sealed class InMemoryTaskRepository : ITaskRepository
         {
             IReadOnlyList<TaskItem> snapshot = _tasks.ToList();
             return Task.FromResult(snapshot);
+        }
+    }
+    public Task<IReadOnlyList<TaskItem>> SearchAsync(TaskFilter filter, CancellationToken ct = default)
+    {
+        ct.ThrowIfCancellationRequested();
+        lock (_sync)
+        {
+            IEnumerable<TaskItem> query = _tasks;
+
+            if (filter.Status is { } status)
+                query = query.Where(t => t.Status == status);
+            if (filter.Priority is { } priority)
+                query = query.Where(t => t.Priority == priority);
+            if (filter.ProjectId is { } projectId)
+                query = query.Where(t => t.ProjectId == projectId);
+            if (!string.IsNullOrWhiteSpace(filter.Search))
+            {
+                var term = filter.Search.Trim();
+                query = query.Where(t =>
+                    t.Title.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+                    (t.Description?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false));
+            }
+
+            IReadOnlyList<TaskItem> result = query.OrderBy(t => t.Id).ToList();
+            return Task.FromResult(result);
         }
     }
 
@@ -83,6 +109,19 @@ public sealed class InMemoryTaskRepository : ITaskRepository
         {
             bool removed = _tasks.RemoveAll(t => t.Id == id) > 0;
             return Task.FromResult(removed);
+        }
+    }
+    public Task<TaskStats> GetStatsAsync(DateTime now, CancellationToken ct = default)
+    {
+        ct.ThrowIfCancellationRequested();
+        lock (_sync)
+        {
+            var stats = new TaskStats(
+                _tasks.Count,
+                _tasks.GroupBy(t => t.Status).ToDictionary(g => g.Key, g => g.Count()),
+                _tasks.GroupBy(t => t.Priority).ToDictionary(g => g.Key, g => g.Count()),
+                _tasks.Count(t => t.DueDate < now && t.Status != TaskItemStatus.Done));
+            return Task.FromResult(stats);
         }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using TaskFlow.Domain.Abstractions;
 using TaskFlow.Domain.Entities;
+using TaskFlow.Domain.Enums;
 using TaskFlow.Infrastructure.Data;
 
 namespace TaskFlow.Infrastructure.Repositories;
@@ -9,7 +10,6 @@ public class EfTaskRepository(TaskFlowDbContext db) : ITaskRepository
 {
     public async Task<IReadOnlyList<TaskItem>> GetAllAsync(CancellationToken ct = default)
     {
-        // Только чтение: без отслеживания, связанные данные одним запросом с JOIN
         return await db.Tasks
             .AsNoTracking()
             .Include(t => t.Project)
@@ -20,7 +20,6 @@ public class EfTaskRepository(TaskFlowDbContext db) : ITaskRepository
 
     public async Task<TaskItem?> GetByIdAsync(int id, CancellationToken ct = default)
     {
-        // С отслеживанием: сервис может изменить объект и вызвать UpdateAsync
         return await db.Tasks
             .Include(t => t.Project)
             .Include(t => t.Tags)
@@ -30,13 +29,11 @@ public class EfTaskRepository(TaskFlowDbContext db) : ITaskRepository
     public async Task AddAsync(TaskItem task, CancellationToken ct = default)
     {
         db.Tasks.Add(task);
-        // После INSERT EF записывает сгенерированный Id в task.Id
         await db.SaveChangesAsync(ct);
     }
 
     public async Task UpdateAsync(TaskItem task, CancellationToken ct = default)
     {
-        // Объект из GetByIdAsync уже отслеживается; объект «со стороны» нужно присоединить
         if (db.Entry(task).State == EntityState.Detached)
             db.Tasks.Update(task);
 
@@ -49,9 +46,65 @@ public class EfTaskRepository(TaskFlowDbContext db) : ITaskRepository
         if (task is null)
             return false;
 
-        // Строки TaskItemTags удалит каскад ON DELETE CASCADE в базе
         db.Tasks.Remove(task);
         await db.SaveChangesAsync(ct);
         return true;
+    }
+
+    public async Task<IReadOnlyList<TaskItem>> SearchAsync(TaskFilter filter, CancellationToken ct = default)
+    {
+        IQueryable<TaskItem> query = db.Tasks
+            .AsNoTracking()
+            .Include(t => t.Tags);
+
+        if (filter.Status is { } status)
+            query = query.Where(t => t.Status == status);
+
+        if (filter.Priority is { } priority)
+            query = query.Where(t => t.Priority == priority);
+
+        if (filter.ProjectId is { } projectId)
+            query = query.Where(t => t.ProjectId == projectId);
+
+        if (!string.IsNullOrWhiteSpace(filter.Search))
+        {
+            var term = filter.Search.Trim();
+            query = query.Where(t =>
+                t.Title.Contains(term) ||
+                (t.Description != null && t.Description.Contains(term)));
+        }
+
+        return await query
+            .OrderBy(t => t.Id)
+            .ToListAsync(ct);
+    }
+
+    public async Task<TaskStats> GetStatsAsync(DateTime now, CancellationToken ct = default)
+    {
+        var tasks = db.Tasks.AsNoTracking();
+
+        var total = await tasks.CountAsync(ct);
+
+        var byStatusQuery = tasks
+            .GroupBy(t => t.Status)
+            .Select(g => new { Status = g.Key, Count = g.Count() });
+
+        
+
+        var byStatus = await byStatusQuery.ToListAsync(ct);
+
+        var byPriority = await tasks
+            .GroupBy(t => t.Priority)
+            .Select(g => new { Priority = g.Key, Count = g.Count() })
+            .ToListAsync(ct);
+
+        var overdue = await tasks.CountAsync(
+            t => t.DueDate < now && t.Status != TaskItemStatus.Done, ct);
+
+        return new TaskStats(
+            total,
+            byStatus.ToDictionary(x => x.Status, x => x.Count),
+            byPriority.ToDictionary(x => x.Priority, x => x.Count),
+            overdue);
     }
 }

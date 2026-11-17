@@ -1,4 +1,5 @@
-﻿using TaskFlow.Domain.Entities;
+﻿using TaskFlow.Domain.Abstractions;
+using TaskFlow.Domain.Entities;
 using TaskFlow.Shared.Dtos;
 
 namespace TaskFlow.Api.Mappings;
@@ -6,8 +7,10 @@ namespace TaskFlow.Api.Mappings;
 public static class TagMappings
 {
     public static TagDto ToDto(this Tag tag) =>
-        new(tag.Id, tag.Name);
+    new(tag.Id, tag.Name, tag.Tasks.Count);
 
+    public static TagDto ToDto(this TagSummary summary) =>
+        new(summary.Id, summary.Name, summary.TaskCount);
     public static Tag ToEntity(this CreateTagRequest request) =>
-        new(request.Name);
+    new(request.Name);
 }

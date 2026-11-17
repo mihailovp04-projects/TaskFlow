@@ -28,8 +28,9 @@ public class TaskItemConfiguration : IEntityTypeConfiguration<TaskItem>
             .HasConversion<string>()
             .HasMaxLength(20);
 
-        // Индексы под частые фильтры списка задач
-        builder.HasIndex(t => t.Status);
+        
+        builder.HasIndex(t => new { t.Status, t.DueDate })
+    .HasDatabaseName("IX_Tasks_Status_DueDate");
         builder.HasIndex(t => t.DueDate);
 
         // Один-ко-многим: при удалении проекта задачи остаются без проекта

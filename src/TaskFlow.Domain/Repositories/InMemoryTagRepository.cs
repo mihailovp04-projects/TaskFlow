@@ -18,6 +18,28 @@ public sealed class InMemoryTagRepository : ITagRepository
             return Task.FromResult(snapshot);
         }
     }
+    public Task<IReadOnlyList<TagSummary>> GetSummariesAsync(CancellationToken ct = default)
+    {
+        ct.ThrowIfCancellationRequested();
+        lock (_sync)
+        {
+            IReadOnlyList<TagSummary> result = _tags
+                .OrderBy(t => t.Name)
+                .Select(t => new TagSummary(t.Id, t.Name, t.Tasks.Count))
+                .ToList();
+            return Task.FromResult(result);
+        }
+    }
+
+    public Task<IReadOnlyList<Tag>> GetByIdsAsync(IReadOnlyCollection<int> ids, CancellationToken ct = default)
+    {
+        ct.ThrowIfCancellationRequested();
+        lock (_sync)
+        {
+            IReadOnlyList<Tag> result = _tags.Where(t => ids.Contains(t.Id)).ToList();
+            return Task.FromResult(result);
+        }
+    }
 
     public Task<Tag?> GetByIdAsync(int id, CancellationToken ct = default)
     {
@@ -52,5 +74,15 @@ public sealed class InMemoryTagRepository : ITagRepository
             _tags.Add(tag);
         }
         return Task.CompletedTask;
+    }
+    public Task<TagSummary?> GetSummaryByIdAsync(int id, CancellationToken ct = default)
+    {
+        ct.ThrowIfCancellationRequested();
+        lock (_sync)
+        {
+            var tag = _tags.FirstOrDefault(t => t.Id == id);
+            TagSummary? summary = tag is null ? null : new TagSummary(tag.Id, tag.Name, tag.Tasks.Count);
+            return Task.FromResult(summary);
+        }
     }
 }

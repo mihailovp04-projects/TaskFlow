@@ -1,3 +1,3 @@
 ﻿namespace TaskFlow.Shared.Dtos;
 
-public sealed record TagDto(int id, string Name);
+public sealed record TagDto(int Id, string Name, int TaskCount);

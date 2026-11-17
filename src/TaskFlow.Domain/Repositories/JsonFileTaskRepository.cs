@@ -33,6 +33,8 @@ public sealed class JsonFileTaskRepository : ITaskRepository
     }
 
     public Task<IReadOnlyList<TaskItem>> GetAllAsync(CancellationToken ct = default) => _inner.GetAllAsync(ct);
+    public Task<IReadOnlyList<TaskItem>> SearchAsync(TaskFilter filter, CancellationToken ct = default) => _inner.SearchAsync(filter, ct);
+    public Task<TaskStats> GetStatsAsync(DateTime now, CancellationToken ct = default) => _inner.GetStatsAsync(now, ct);
 
     public Task<TaskItem?> GetByIdAsync(int id, CancellationToken ct = default) => _inner.GetByIdAsync(id, ct);
 
@@ -94,4 +96,5 @@ public sealed class JsonFileTaskRepository : ITaskRepository
             _gate.Release();
         }
     }
+
 }

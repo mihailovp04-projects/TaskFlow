@@ -15,7 +15,7 @@ public sealed class TagsController(
     [ProducesResponseType<IReadOnlyList<TagDto>>(StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<TagDto>>> GetAll(CancellationToken cancellationToken)
     {
-        var tags = await tagService.GetAllAsync(cancellationToken);
+        var tags = await tagService.GetSummariesAsync(cancellationToken);
         var result = tags.Select(p => p.ToDto()).ToList();
         return Ok(result);
     }
@@ -25,7 +25,7 @@ public sealed class TagsController(
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<TagDto>> GetById(int id, CancellationToken cancellationToken)
     {
-        var tag = await tagService.GetByIdAsync(id, cancellationToken);
+        var tag = await tagService.GetSummaryByIdAsync(id, cancellationToken);
         if (tag is null)
             return NotFound();
 

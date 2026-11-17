@@ -10,7 +10,7 @@ POST {{baseUrl}}/api/projects
 Content-Type: application/json
 
 {
-  "name": "TaskFlow",
+  "name": "Week 3 project",
   "description": "Учебный проект курса"
 }
 
@@ -19,7 +19,7 @@ POST {{baseUrl}}/api/projects
 Content-Type: application/json
 
 {
-  "name": "taskflow"
+  "name": "week 3 project"
 }
 
 ### 4. Создать задачу в проекте: ожидаем 201 и Location
@@ -132,7 +132,7 @@ PUT {{baseUrl}}/api/projects/{{createProject.response.body.$.id}}
 Content-Type: application/json
 
 {
-  "name": "TASKFLOW",
+  "name": "WEEK 3 PROJECT",
   "description": "Учебный проект курса"
 }
 
@@ -196,7 +196,7 @@ POST {{baseUrl}}/api/tags
 Content-Type: application/json
 
 {
-  "name": "urgent"
+  "name": "release"
 }
 
 ### 31. Прочитать метку по Location: ожидаем 200
@@ -276,4 +276,76 @@ Content-Type: application/json
 
 ### Несуществующий проект: ожидается 404
 GET {{host}}/api/projects/999/tasks
+
+### 38. Фильтр в SQL: ожидаем 200
+GET {{baseUrl}}/api/tasks?status=Todo&priority=High&search=fix
+
+### 39. Метки с количеством задач: ожидаем 200
+GET {{baseUrl}}/api/tags
+
+### 40. Назначить метки задаче 3: ожидаем 204
+PUT {{baseUrl}}/api/tasks/3/tags
+Content-Type: application/json
+
+{
+  "tagIds": [1, 2]
+}
+
+### 41. Несуществующие метки: ожидаем 400
+PUT {{baseUrl}}/api/tasks/3/tags
+Content-Type: application/json
+
+{
+  "tagIds": [1, 998, 999]
+}
+
+### 42. Метки несуществующей задачи: ожидаем 404
+PUT {{baseUrl}}/api/tasks/999999/tags
+Content-Type: application/json
+
+{
+  "tagIds": [1]
+}
+
+### 43. Статистика: ожидаем 200
+GET {{baseUrl}}/api/tasks/stats
+
+### 44. Создание задачи с несуществующим проектом: ожидаем 400
+POST {{baseUrl}}/api/tasks
+Content-Type: application/json
+
+{
+  "title": "Bad project",
+  "priority": "High",
+  "projectId": 999
+}
+
+### 45. Изменение задачи с несуществующим проектом: ожидаем 400
+PUT {{baseUrl}}/api/tasks/1
+Content-Type: application/json
+
+{
+  "title": "Set up EF Core",
+  "priority": "High",
+  "projectId": 999
+}
+
+### 46. Цвет проекта через PUT: ожидаем 204
+PUT {{baseUrl}}/api/projects/2
+Content-Type: application/json
+
+{
+  "name": "TaskFlow",
+  "description": "Course project",
+  "color": "#43A047"
+}
+
+### 47. Неверный цвет в PUT: ожидаем 400
+PUT {{baseUrl}}/api/projects/2
+Content-Type: application/json
+
+{
+  "name": "TaskFlow",
+  "color": "green"
+}
 

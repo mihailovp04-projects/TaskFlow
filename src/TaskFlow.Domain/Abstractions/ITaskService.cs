@@ -11,4 +11,5 @@ public interface ITaskService
     Task<bool> UpdateAsync(TaskItem task, CancellationToken ct = default);
     Task<TaskItem?> ChangeStatusAsync(int id, TaskItemStatus newStatus, CancellationToken ct = default);
     Task<bool> DeleteAsync(int id, CancellationToken ct = default);
+    Task<TaskStats> GetStatsAsync(CancellationToken ct = default);
 }

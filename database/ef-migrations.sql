@@ -200,3 +200,32 @@ END;
 COMMIT;
 GO
 
+BEGIN TRANSACTION;
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261117191509_AddTaskStatusDueDateIndex'
+)
+BEGIN
+    DROP INDEX [IX_Tasks_Status] ON [Tasks];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261117191509_AddTaskStatusDueDateIndex'
+)
+BEGIN
+    CREATE INDEX [IX_Tasks_Status_DueDate] ON [Tasks] ([Status], [DueDate]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261117191509_AddTaskStatusDueDateIndex'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261117191509_AddTaskStatusDueDateIndex', N'10.0.15');
+END;
+
+COMMIT;
+GO
+

@@ -79,12 +79,13 @@ public sealed class ProjectsController(
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Update(
     int id,
+       
     [FromBody] UpdateProjectRequest request,
     CancellationToken cancellationToken)
     {
         try
         {
-            var updated = await projectService.UpdateAsync(id, request.Name, request.Description, cancellationToken);
+            var updated = await projectService.UpdateAsync(id, request.Name, request.Description, request.Color, cancellationToken);
             if (!updated)
                 return NotFound();
 

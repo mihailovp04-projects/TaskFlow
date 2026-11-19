@@ -1,0 +1,37 @@
+﻿@page "/tasks/new"
+@inject ITaskApiClient Api
+@inject NavigationManager Navigation
+
+<PageTitle>New task - TaskFlow</PageTitle>
+
+<h1>New task</h1>
+
+@if (_projects is null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <TaskForm Model="_model" Projects="_projects" OnSubmit="CreateAsync" SubmitText="Create" CancelHref="tasks" />
+}
+
+@code {
+    // /tasks/new?projectId=2 сразу выбирает проект
+    [SupplyParameterFromQuery]
+    public int? ProjectId { get; set; }
+
+    private readonly TaskFormModel _model = new();
+    private IReadOnlyList<ProjectDto>? _projects;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _model.ProjectId = ProjectId;
+        _projects = await Api.GetProjectsAsync();
+    }
+
+    private async Task CreateAsync(TaskFormModel model)
+    {
+        var created = await Api.CreateTaskAsync(model.ToCreateRequest());
+        Navigation.NavigateTo($"tasks/{created.Id}");
+    }
+}

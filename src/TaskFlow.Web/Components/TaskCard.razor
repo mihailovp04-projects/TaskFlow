@@ -1,0 +1,45 @@
+﻿<article class="task-card @(IsOverdue ? "overdue" : null)">
+    <header class="task-card-header">
+        <a class="task-title" href="tasks/@Item.Id">@Item.Title</a>
+        <PriorityBadge Priority="Item.Priority" />
+    </header>
+
+    <p class="task-meta">
+        <span>@TaskDisplay.StatusLabel(Item.Status)</span>
+        @if (Item.DueDate is not null)
+        {
+            <span>due @Item.DueDate.Value.ToString("yyyy-MM-dd")</span>
+        }
+        @if (IsOverdue)
+        {
+            <span class="overdue-label">overdue</span>
+        }
+    </p>
+
+    @if (!string.IsNullOrWhiteSpace(Item.Description))
+    {
+        <p class="task-description">@Item.Description</p>
+    }
+
+    <footer class="task-card-actions">
+        <a class="btn btn-sm btn-outline-primary" href="tasks/@Item.Id/edit">Edit</a>
+        @if (OnDelete.HasDelegate)
+        {
+            <ConfirmButton ButtonClass="btn-sm btn-outline-danger" OnConfirmed="() => OnDelete.InvokeAsync(Item.Id)">
+                Delete
+            </ConfirmButton>
+        }
+    </footer>
+</article>
+
+@code {
+    // параметр назван Item, а не Task: имя Task спрятало бы тип System.Threading.Tasks.Task
+    [Parameter, EditorRequired]
+    public TaskDto Item { get; set; } = default!;
+
+    // родитель получает id задачи и сам решает, как удалять
+    [Parameter]
+    public EventCallback<int> OnDelete { get; set; }
+
+    private bool IsOverdue => TaskDisplay.IsOverdue(Item, DateTime.Today);
+}

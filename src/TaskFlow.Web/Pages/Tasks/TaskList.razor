@@ -1,0 +1,118 @@
+﻿@page "/tasks"
+@inject ITaskApiClient Api
+@inject ILogger<TaskList> Logger
+
+<PageTitle>Tasks - TaskFlow</PageTitle>
+
+<div class="page-header">
+    <h1>Tasks</h1>
+    <a class="btn btn-primary" href="tasks/new">New task</a>
+</div>
+
+<div class="row g-2 mb-3">
+    <div class="col-md-4">
+        <StatusSelector @bind-Value="_status" @bind-Value:after="LoadAsync" AllowAll="true" />
+    </div>
+    <div class="col-md-4">
+        <select class="form-select" aria-label="Priority" @bind="_priority" @bind:after="LoadAsync">
+            <option value="">All priorities</option>
+            @foreach (var priority in Enum.GetValues<TaskPriority>())
+            {
+                <option value="@priority">@priority</option>
+            }
+        </select>
+    </div>
+    <div class="col-md-4">
+        <input class="form-control" placeholder="Search by title" aria-label="Search"
+               @bind="_search" @bind:event="oninput" />
+    </div>
+</div>
+
+@if (_error is not null)
+{
+    <div class="alert alert-danger">@_error</div>
+}
+
+@if (_tasks is null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    var visible = VisibleTasks;
+
+    if (visible.Count == 0)
+    {
+        <p>No tasks match the filter.</p>
+    }
+    else
+    {
+        <p class="text-muted">Shown: @visible.Count of @_tasks.Count</p>
+        <div class="task-grid">
+            @foreach (var task in visible)
+            {
+                <TaskCard @key="task.Id" Item="task" OnDelete="DeleteAsync" />
+            }
+        </div>
+    }
+}
+
+@code {
+    // null = данные ещё загружаются
+    private List<TaskDto>? _tasks;
+    private TaskItemStatus? _status;
+    private string _priority = string.Empty;
+    private string _search = string.Empty;
+    private string? _error;
+
+    // поиск фильтрует уже загруженный список, без запроса к API
+    private List<TaskDto> VisibleTasks
+    {
+        get
+        {
+            if (_tasks is null)
+            {
+                return [];
+            }
+
+            if (string.IsNullOrWhiteSpace(_search))
+            {
+                return _tasks;
+            }
+
+            var term = _search.Trim();
+            return _tasks.Where(t => t.Title.Contains(term, StringComparison.OrdinalIgnoreCase)).ToList();
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _tasks = null;
+        _error = null;
+
+        TaskPriority? priority = Enum.TryParse<TaskPriority>(_priority, out var parsed) ? parsed : null;
+        var result = await Api.GetTasksAsync(_status, priority);
+        _tasks = result.ToList();
+
+        Logger.LogInformation("Loaded {Count} tasks (status={Status}, priority={Priority})", _tasks.Count, _status, priority);
+    }
+
+    private async Task DeleteAsync(int id)
+    {
+        var deleted = await Api.DeleteTaskAsync(id);
+        if (deleted)
+        {
+            _tasks?.RemoveAll(t => t.Id == id);
+        }
+        else
+        {
+            _error = $"Task #{id} was not found.";
+        }
+        // StateHasChanged не нужен: после EventCallback страница перерисуется сама
+    }
+}

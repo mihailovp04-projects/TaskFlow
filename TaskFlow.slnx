@@ -4,6 +4,7 @@
     <Project Path="src/TaskFlow.Domain/TaskFlow.Domain.csproj" />
     <Project Path="src/TaskFlow.Infrastructure/TaskFlow.Infrastructure.csproj" />
     <Project Path="src/TaskFlow.Shared/TaskFlow.Shared.csproj" />
+    <Project Path="src/TaskFlow.Web/TaskFlow.Web.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/TaskFlow.Domain.Tests/TaskFlow.Domain.Tests.csproj" />

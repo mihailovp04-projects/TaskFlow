@@ -1,0 +1,113 @@
+﻿@page "/projects"
+@inject ITaskApiClient Api
+
+<PageTitle>Projects - TaskFlow</PageTitle>
+
+<h1>Projects</h1>
+
+@if (_projects is null)
+{
+    <p><em>Loading...</em></p>
+}
+else if (_projects.Count == 0)
+{
+    <p>No projects yet.</p>
+}
+else
+{
+    <table class="table table-hover align-middle">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Description</th>
+                <th class="text-end">Open tasks</th>
+                <th class="text-end">All tasks</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var project in _projects)
+            {
+                <tr @key="project.Id">
+                    <td>@project.Name</td>
+                    <td>@(project.Description ?? "-")</td>
+                    <td class="text-end">@OpenCount(project.Id)</td>
+                    <td class="text-end">@TotalCount(project.Id)</td>
+                    <td class="text-end">
+                        <a class="btn btn-sm btn-outline-primary" href="@($"tasks/new?projectId={project.Id}")">Add task</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+<h2 class="h4 mt-4">New project</h2>
+
+<EditForm Model="_model" OnValidSubmit="CreateAsync">
+    <DataAnnotationsValidator />
+    <div class="row g-2 align-items-start">
+        <div class="col-md-4">
+            <InputText class="form-control" placeholder="Name" aria-label="Name" @bind-Value="_model.Name" />
+            <ValidationMessage For="() => _model.Name" />
+        </div>
+        <div class="col-md-6">
+            <InputText class="form-control" placeholder="Description (optional)" aria-label="Description" @bind-Value="_model.Description" />
+            <ValidationMessage For="() => _model.Description" />
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-primary w-100" disabled="@_saving">Add</button>
+        </div>
+    </div>
+</EditForm>
+
+@if (_error is not null)
+{
+    <div class="alert alert-danger mt-2">@_error</div>
+}
+
+@code {
+    private List<ProjectDto>? _projects;
+    private IReadOnlyList<TaskDto> _tasks = [];
+    private ProjectFormModel _model = new();
+    private bool _saving;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        var projects = await Api.GetProjectsAsync();
+        _tasks = await Api.GetTasksAsync();
+        _projects = projects.ToList();
+    }
+
+    private int TotalCount(int projectId) => _tasks.Count(t => t.ProjectId == projectId);
+
+    private int OpenCount(int projectId) =>
+        _tasks.Count(t => t.ProjectId == projectId && t.Status != TaskItemStatus.Done);
+
+    private async Task CreateAsync()
+    {
+        _saving = true;
+        _error = null;
+        try
+        {
+            await Api.CreateProjectAsync(_model.ToCreateRequest());
+            // новая модель = пустая форма без старых ошибок
+            _model = new ProjectFormModel();
+            await LoadAsync();
+        }
+        catch (InvalidOperationException ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}

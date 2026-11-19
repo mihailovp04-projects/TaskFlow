@@ -1,0 +1,54 @@
+﻿@if (!_confirming)
+{
+    <button type="button" class="btn @ButtonClass" disabled="@Disabled" @onclick="StartConfirm">
+        @ChildContent
+    </button>
+}
+else
+{
+    <span class="confirm-box">
+        <span class="confirm-text">@ConfirmText</span>
+        <button type="button" class="btn btn-sm btn-danger" disabled="@_busy" @onclick="ConfirmAsync">Yes</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" disabled="@_busy" @onclick="Cancel">No</button>
+    </span>
+}
+
+@code {
+    // текст кнопки задаётся содержимым тега: <ConfirmButton>Delete</ConfirmButton>
+    [Parameter, EditorRequired]
+    public RenderFragment ChildContent { get; set; } = default!;
+
+    // вызывается только после нажатия "Yes"
+    [Parameter, EditorRequired]
+    public EventCallback OnConfirmed { get; set; }
+
+    [Parameter]
+    public string ConfirmText { get; set; } = "Are you sure?";
+
+    [Parameter]
+    public string ButtonClass { get; set; } = "btn-outline-danger";
+
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    private bool _confirming;
+    private bool _busy;
+
+    private void StartConfirm() => _confirming = true;
+
+    private void Cancel() => _confirming = false;
+
+    private async Task ConfirmAsync()
+    {
+        _busy = true;
+        try
+        {
+            await OnConfirmed.InvokeAsync();
+        }
+        finally
+        {
+            _busy = false;
+            _confirming = false;
+        }
+    }
+}

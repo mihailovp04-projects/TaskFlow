@@ -5,17 +5,20 @@ namespace TaskFlow.Api.Mappings;
 
 public static class TaskMappings
 {
-    public static TaskDto ToDto(this TaskItem task, DateTime now) => new(
-        task.Id,
-        task.Title,
-        task.Description,
-        task.Priority,
-        task.Status,
-        task.DueDate,
-        task.CompletedAt,
-        task.ProjectId,
-        task.CreatedAt,
-        task.IsOverdue(now));
+    public static TaskDto ToDto(this TaskItem task, DateTime now) => new()
+    {
+        Id = task.Id,
+        Title = task.Title,
+        Description = task.Description,
+        Priority = task.Priority,
+        Status = task.Status,
+        DueDate = task.DueDate,
+        CompletedAt = task.CompletedAt,
+        ProjectId = task.ProjectId,
+        CreatedAt = task.CreatedAt,
+        IsOverdue = task.IsOverdue(now)
+    };
+
 
     public static TaskItem ToEntity(this CreateTaskRequest request) =>
         new(request.Title, request.Priority, request.DueDate, request.Description)

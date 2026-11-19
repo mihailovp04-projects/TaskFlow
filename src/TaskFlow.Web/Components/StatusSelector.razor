@@ -1,0 +1,37 @@
+﻿<select class="form-select" value="@CurrentValue" @onchange="OnChangeAsync" disabled="@Disabled" aria-label="Status">
+    @if (AllowAll)
+    {
+        <option value="">All statuses</option>
+    }
+    @foreach (var status in Enum.GetValues<TaskItemStatus>())
+    {
+        <option value="@status">@TaskDisplay.StatusLabel(status)</option>
+    }
+</select>
+
+@code {
+    // пара Value + ValueChanged позволяет родителю писать @bind-Value
+    [Parameter]
+    public TaskItemStatus? Value { get; set; }
+
+    [Parameter]
+    public EventCallback<TaskItemStatus?> ValueChanged { get; set; }
+
+    // true: добавляет пункт "All statuses" (null), нужен для фильтра
+    [Parameter]
+    public bool AllowAll { get; set; }
+
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    private string CurrentValue => Value?.ToString() ?? string.Empty;
+
+    private async Task OnChangeAsync(ChangeEventArgs e)
+    {
+        var text = e.Value?.ToString();
+        TaskItemStatus? newValue = Enum.TryParse<TaskItemStatus>(text, out var parsed) ? parsed : null;
+
+        // компонент не меняет Value сам: он сообщает родителю новое значение
+        await ValueChanged.InvokeAsync(newValue);
+    }
+}

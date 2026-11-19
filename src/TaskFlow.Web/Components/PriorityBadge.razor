@@ -1,0 +1,9 @@
+﻿<span class="priority-badge priority-@Priority.ToString().ToLowerInvariant()" title="Priority: @Priority">
+    @Priority
+</span>
+
+@code {
+    // обязательный параметр: без него компилятор выдаст предупреждение RZ2012
+    [Parameter, EditorRequired]
+    public TaskPriority Priority { get; set; }
+}

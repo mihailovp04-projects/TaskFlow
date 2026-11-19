@@ -1,0 +1,59 @@
+﻿@page "/tasks/{Id:int}/edit"
+@inject ITaskApiClient Api
+@inject NavigationManager Navigation
+
+<PageTitle>Edit task - TaskFlow</PageTitle>
+
+@if (_notFound)
+{
+    <div class="alert alert-warning">
+        Task #@Id was not found. <a href="tasks">Back to the list</a>
+    </div>
+}
+else if (_model is null || _projects is null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <h1>Edit task #@Id</h1>
+    <TaskForm Model="_model" Projects="_projects" OnSubmit="SaveAsync" SubmitText="Save changes" CancelHref="@($"tasks/{Id}")" />
+}
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private TaskFormModel? _model;
+    private IReadOnlyList<ProjectDto>? _projects;
+    private bool _notFound;
+
+    // OnParametersSetAsync, а не OnInitializedAsync: при смене Id экземпляр страницы переиспользуется
+    protected override async Task OnParametersSetAsync()
+    {
+        _model = null;
+        _notFound = false;
+
+        var task = await Api.GetTaskAsync(Id);
+        if (task is null)
+        {
+            _notFound = true;
+            return;
+        }
+
+        _projects = await Api.GetProjectsAsync();
+        _model = TaskFormModel.FromDto(task);
+    }
+
+    private async Task SaveAsync(TaskFormModel model)
+    {
+        var updated = await Api.UpdateTaskAsync(Id, model.ToUpdateRequest());
+        if (!updated)
+        {
+            _notFound = true;
+            return;
+        }
+
+        Navigation.NavigateTo($"tasks/{Id}");
+    }
+}

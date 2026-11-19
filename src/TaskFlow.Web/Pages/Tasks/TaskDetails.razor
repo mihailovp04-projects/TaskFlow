@@ -1,0 +1,107 @@
+﻿@page "/tasks/{Id:int}"
+@inject ITaskApiClient Api
+@inject NavigationManager Navigation
+
+<PageTitle>Task #@Id - TaskFlow</PageTitle>
+
+@if (_notFound)
+{
+    <div class="alert alert-warning">
+        Task #@Id was not found. <a href="tasks">Back to the list</a>
+    </div>
+}
+else if (_task is null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="details-header">
+        <h1>@_task.Title</h1>
+        <PriorityBadge Priority="_task.Priority" />
+    </div>
+
+    <dl class="row">
+        <dt class="col-sm-3">Status</dt>
+        <dd class="col-sm-9">
+            <div class="status-box">
+                <StatusSelector Value="_task.Status" ValueChanged="ChangeStatusAsync" Disabled="_busy" />
+            </div>
+        </dd>
+
+        <dt class="col-sm-3">Project</dt>
+        <dd class="col-sm-9">@(_projectName ?? "(no project)")</dd>
+
+        <dt class="col-sm-3">Due date</dt>
+        <dd class="col-sm-9">
+            @(_task.DueDate?.ToString("yyyy-MM-dd") ?? "-")
+            @if (TaskDisplay.IsOverdue(_task, DateTime.Today))
+            {
+                <span class="text-danger fw-semibold">overdue</span>
+            }
+        </dd>
+
+        <dt class="col-sm-3">Created</dt>
+        <dd class="col-sm-9">@_task.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</dd>
+
+        <dt class="col-sm-3">Completed</dt>
+        <dd class="col-sm-9">@(_task.CompletedAt?.ToLocalTime().ToString("yyyy-MM-dd HH:mm") ?? "-")</dd>
+    </dl>
+
+    <p class="description">@(_task.Description ?? "No description.")</p>
+
+    <div class="actions">
+        <a class="btn btn-primary" href="tasks/@_task.Id/edit">Edit</a>
+        <ConfirmButton OnConfirmed="DeleteAsync" ConfirmText="Delete this task?">Delete task</ConfirmButton>
+        <a class="btn btn-link" href="tasks">Back to the list</a>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private TaskDto? _task;
+    private string? _projectName;
+    private bool _notFound;
+    private bool _busy;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _task = null;
+        _notFound = false;
+
+        _task = await Api.GetTaskAsync(Id);
+        if (_task is null)
+        {
+            _notFound = true;
+            return;
+        }
+
+        _projectName = null;
+        if (_task.ProjectId is not null)
+        {
+            var projects = await Api.GetProjectsAsync();
+            _projectName = projects.FirstOrDefault(p => p.Id == _task.ProjectId)?.Name;
+        }
+    }
+
+    private async Task ChangeStatusAsync(TaskItemStatus? status)
+    {
+        if (_task is null || status is null || status == _task.Status)
+        {
+            return;
+        }
+
+        _busy = true;
+        await Api.ChangeStatusAsync(_task.Id, status.Value);
+        _task = await Api.GetTaskAsync(_task.Id);
+        _busy = false;
+    }
+
+    private async Task DeleteAsync()
+    {
+        await Api.DeleteTaskAsync(Id);
+        Navigation.NavigateTo("tasks");
+    }
+}

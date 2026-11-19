@@ -1,0 +1,32 @@
+﻿@page "/"
+@inject ITaskApiClient Api
+
+<PageTitle>TaskFlow</PageTitle>
+
+<h1>TaskFlow</h1>
+<p>Blazor WebAssembly client. Week 6: data comes from an in-memory fake API client.</p>
+
+@if (_tasks is null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <ul>
+        @foreach (var status in Enum.GetValues<TaskItemStatus>())
+        {
+            <li>@TaskDisplay.StatusLabel(status): <strong>@_tasks.Count(t => t.Status == status)</strong></li>
+        }
+        <li>Overdue: <strong>@_tasks.Count(t => TaskDisplay.IsOverdue(t, DateTime.Today))</strong></li>
+    </ul>
+    <a class="btn btn-primary" href="tasks">Open tasks</a>
+}
+
+@code {
+    private IReadOnlyList<TaskDto>? _tasks;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _tasks = await Api.GetTasksAsync();
+    }
+}

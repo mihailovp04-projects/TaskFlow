@@ -1,0 +1,83 @@
+﻿<EditForm Model="Model" OnValidSubmit="HandleValidSubmitAsync">
+    <DataAnnotationsValidator />
+    <ValidationSummary class="text-danger" />
+
+    <div class="mb-3">
+        <label for="title" class="form-label">Title</label>
+        <InputText id="title" class="form-control" @bind-Value="Model.Title" />
+        <ValidationMessage For="() => Model.Title" />
+    </div>
+
+    <div class="mb-3">
+        <label for="description" class="form-label">Description</label>
+        <InputTextArea id="description" class="form-control" rows="4" @bind-Value="Model.Description" />
+        <ValidationMessage For="() => Model.Description" />
+    </div>
+
+    <div class="row">
+        <div class="col-md-4 mb-3">
+            <label for="priority" class="form-label">Priority</label>
+            <InputSelect id="priority" class="form-select" @bind-Value="Model.Priority">
+                @foreach (var priority in Enum.GetValues<TaskPriority>())
+                {
+                    <option value="@priority">@priority</option>
+                }
+            </InputSelect>
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <label for="dueDate" class="form-label">Due date</label>
+            <InputDate id="dueDate" class="form-control" @bind-Value="Model.DueDate" />
+            <ValidationMessage For="() => Model.DueDate" />
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <label for="project" class="form-label">Project</label>
+            <InputSelect id="project" class="form-select" @bind-Value="Model.ProjectId">
+                <option value="">(no project)</option>
+                @foreach (var project in Projects)
+                {
+                    <option value="@project.Id">@project.Name</option>
+                }
+            </InputSelect>
+        </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary" disabled="@_saving">
+        @(_saving ? "Saving..." : SubmitText)
+    </button>
+    <a class="btn btn-link" href="@CancelHref">Cancel</a>
+</EditForm>
+
+@code {
+    [Parameter, EditorRequired]
+    public TaskFormModel Model { get; set; } = default!;
+
+    // форма не знает, создаёт она задачу или редактирует: это решает страница
+    [Parameter, EditorRequired]
+    public EventCallback<TaskFormModel> OnSubmit { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<ProjectDto> Projects { get; set; } = [];
+
+    [Parameter]
+    public string SubmitText { get; set; } = "Save";
+
+    [Parameter]
+    public string CancelHref { get; set; } = "tasks";
+
+    private bool _saving;
+
+    private async Task HandleValidSubmitAsync()
+    {
+        _saving = true;
+        try
+        {
+            await OnSubmit.InvokeAsync(Model);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}

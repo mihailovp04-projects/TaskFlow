@@ -5,7 +5,7 @@ using TaskFlow.Shared.Dtos;
 namespace TaskFlow.Web.Models;
 
 // Модель формы задачи: одна для создания и для редактирования
-public sealed class TaskFormModel
+public sealed class TaskFormModel : IValidatableObject
 {
     [Required(ErrorMessage = "Title is required.")]
     [StringLength(200, ErrorMessage = "Title must be at most 200 characters.")]
@@ -28,6 +28,18 @@ public sealed class TaskFormModel
         DueDate = dto.DueDate,
         ProjectId = dto.ProjectId
     };
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        var description = Description?.Trim() ?? string.Empty;
+
+        if (Priority == TaskPriority.Critical && description.Length < 10)
+        {
+            yield return new ValidationResult(
+                "Critical tasks need a description of at least 10 characters.",
+                new[] { nameof(Description) });
+        }
+    }
 
     public CreateTaskRequest ToCreateRequest() => new()
     {

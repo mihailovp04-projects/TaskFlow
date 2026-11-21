@@ -26,6 +26,7 @@ public interface ITaskApiClient
     Task<bool> DeleteTaskAsync(int id, CancellationToken ct = default);
 
     Task<IReadOnlyList<ProjectDto>> GetProjectsAsync(CancellationToken ct = default);
+    Task<ProjectDto?> GetProjectAsync(int id, CancellationToken ct = default);
 
     // InvalidOperationException, если проект с таким именем уже есть (у API это 409)
     Task<ProjectDto> CreateProjectAsync(CreateProjectRequest request, CancellationToken ct = default);

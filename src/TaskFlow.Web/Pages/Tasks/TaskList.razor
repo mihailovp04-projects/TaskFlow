@@ -1,6 +1,8 @@
 ﻿@page "/tasks"
 @inject ITaskApiClient Api
 @inject ILogger<TaskList> Logger
+@inject NavigationManager Navigation
+@implements IDisposable
 
 <PageTitle>Tasks - TaskFlow</PageTitle>
 
@@ -11,10 +13,10 @@
 
 <div class="row g-2 mb-3">
     <div class="col-md-4">
-        <StatusSelector @bind-Value="_status" @bind-Value:after="LoadAsync" AllowAll="true" />
+        <StatusSelector @bind-Value="_status" @bind-Value:after="ApplyFilters" AllowAll="true" />
     </div>
     <div class="col-md-4">
-        <select class="form-select" aria-label="Priority" @bind="_priority" @bind:after="LoadAsync">
+        <select class="form-select" aria-label="Priority" @bind="_priority" @bind:after="ApplyFilters">
             <option value="">All priorities</option>
             @foreach (var priority in Enum.GetValues<TaskPriority>())
             {
@@ -24,7 +26,8 @@
     </div>
     <div class="col-md-4">
         <input class="form-control" placeholder="Search by title" aria-label="Search"
-               @bind="_search" @bind:event="oninput" />
+               @bind="_search" @bind:event="oninput"
+               @onblur="ApplyFilters" />
     </div>
 </div>
 
@@ -35,7 +38,7 @@
 
 @if (_tasks is null)
 {
-    <p><em>Loading...</em></p>
+    <LoadingIndicator />
 }
 else
 {
@@ -43,7 +46,7 @@ else
 
     if (visible.Count == 0)
     {
-        <p>No tasks match the filter.</p>
+        <EmptyState>No tasks match the filter.</EmptyState>
     }
     else
     {
@@ -51,14 +54,15 @@ else
         <div class="task-grid">
             @foreach (var task in visible)
             {
-                <TaskCard @key="task.Id" Item="task" OnDelete="DeleteAsync" />
+                <TaskCard @key="task.Id" Item="task" OnDelete="DeleteAsync" OnStatusChange="ChangeStatusAsync" />
             }
         </div>
     }
 }
 
 @code {
-    // null = данные ещё загружаются
+
+        private CancellationTokenSource? _loadCts;
     private List<TaskDto>? _tasks;
     private TaskItemStatus? _status;
     private string _priority = string.Empty;
@@ -85,22 +89,53 @@ else
         }
     }
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnParametersSetAsync()
     {
+        _status = Enum.TryParse<TaskItemStatus>(StatusQuery, out var status) ? status : null;
+        _priority = Enum.TryParse<TaskPriority>(PriorityQuery, out var priority) ? priority.ToString() : string.Empty;
+        _search = SearchQuery ?? string.Empty;
+
         await LoadAsync();
     }
 
     private async Task LoadAsync()
-    {
-        _tasks = null;
-        _error = null;
+{
+    _loadCts?.Cancel();
+    _loadCts = new CancellationTokenSource();
+    var token = _loadCts.Token;
 
+    _tasks = null;
+    _error = null;
+
+    try
+    {
         TaskPriority? priority = Enum.TryParse<TaskPriority>(_priority, out var parsed) ? parsed : null;
-        var result = await Api.GetTasksAsync(_status, priority);
+        var result = await Api.GetTasksAsync(_status, priority, ct: token);
         _tasks = result.ToList();
 
         Logger.LogInformation("Loaded {Count} tasks (status={Status}, priority={Priority})", _tasks.Count, _status, priority);
     }
+    catch (OperationCanceledException)
+    {
+    }
+}
+
+    private void ApplyFilters()
+    {
+        var uri = Navigation.GetUriWithQueryParameters(new Dictionary<string, object?>
+        {
+            ["status"] = _status?.ToString(),
+            ["priority"] = string.IsNullOrEmpty(_priority) ? null : _priority,
+            ["search"] = string.IsNullOrWhiteSpace(_search) ? null : _search.Trim()
+        });
+        Navigation.NavigateTo(uri);
+    }
+
+    public void Dispose()
+{
+    _loadCts?.Cancel();
+    _loadCts?.Dispose();
+}
 
     private async Task DeleteAsync(int id)
     {
@@ -113,6 +148,16 @@ else
         {
             _error = $"Task #{id} was not found.";
         }
-        // StateHasChanged не нужен: после EventCallback страница перерисуется сама
     }
+    [SupplyParameterFromQuery(Name = "status")]
+    public string? StatusQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = "priority")]
+    public string? PriorityQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = "search")]
+    public string? SearchQuery { get; set; }
+
+    private Task ChangeStatusAsync(StatusChangeRequest request) =>
+    Api.ApplyStatusChangeAsync(_tasks, request);
 }

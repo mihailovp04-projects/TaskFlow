@@ -63,6 +63,11 @@ public sealed class FakeTaskApiClient : ITaskApiClient
         await Task.Delay(Latency, ct);
         return _tasks.FirstOrDefault(t => t.Id == id);
     }
+    public async Task<ProjectDto?> GetProjectAsync(int id, CancellationToken ct = default)
+    {
+        await Task.Delay(Latency, ct);
+        return _projects.FirstOrDefault(p => p.Id == id);
+    }
 
     public async Task<TaskDto> CreateTaskAsync(CreateTaskRequest request, CancellationToken ct = default)
     {

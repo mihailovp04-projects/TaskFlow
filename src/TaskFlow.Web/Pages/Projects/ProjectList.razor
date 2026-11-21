@@ -7,11 +7,11 @@
 
 @if (_projects is null)
 {
-    <p><em>Loading...</em></p>
+    <LoadingIndicator />
 }
 else if (_projects.Count == 0)
 {
-    <p>No projects yet.</p>
+    <EmptyState>No projects yet.</EmptyState>
 }
 else
 {
@@ -29,7 +29,7 @@ else
             @foreach (var project in _projects)
             {
                 <tr @key="project.Id">
-                    <td>@project.Name</td>
+                    <td><a href="projects/@project.Id">@project.Name</a></td>
                     <td>@(project.Description ?? "-")</td>
                     <td class="text-end">@OpenCount(project.Id)</td>
                     <td class="text-end">@TotalCount(project.Id)</td>

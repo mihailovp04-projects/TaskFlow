@@ -1,0 +1,69 @@
+﻿@page "/projects/{Id:int}"
+@inject ITaskApiClient Api
+
+<PageTitle>Project #@Id - TaskFlow</PageTitle>
+
+@if (_notFound)
+{
+    <div class="alert alert-warning">
+        Project #@Id was not found. <a href="projects">Back to projects</a>
+    </div>
+}
+else if (_project is null || _tasks is null)
+{
+    <LoadingIndicator />
+}
+else
+{
+    <div class="page-header">
+        <h1>@_project.Name</h1>
+        <a class="btn btn-primary" href="@($"tasks/new?projectId={Id}")">Add task</a>
+    </div>
+
+    <p>@(_project.Description ?? "No description.")</p>
+    <p class="text-muted">Open tasks: @OpenCount of @_tasks.Count</p>
+
+    @if (_tasks.Count == 0)
+    {
+        <EmptyState>No tasks in this project yet.</EmptyState>
+    }
+    else
+    {
+        <div class="task-grid">
+            @foreach (var task in _tasks)
+            {
+                <TaskCard @key="task.Id" Item="task" OnStatusChange="ChangeStatusAsync" />
+            }
+        </div>
+    }
+}
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private ProjectDto? _project;
+    private List<TaskDto>? _tasks;
+    private bool _notFound;
+
+    private int OpenCount => _tasks?.Count(t => t.Status != TaskItemStatus.Done) ?? 0;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _project = null;
+        _tasks = null;
+        _notFound = false;
+
+        _project = await Api.GetProjectAsync(Id);
+        if (_project is null)
+        {
+            _notFound = true;
+            return;
+        }
+
+        var tasks = await Api.GetTasksAsync(projectId: Id);
+        _tasks = tasks.ToList();
+    }
+    private Task ChangeStatusAsync(StatusChangeRequest request) =>
+    Api.ApplyStatusChangeAsync(_tasks, request);
+}

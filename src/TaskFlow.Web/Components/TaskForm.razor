@@ -37,7 +37,7 @@
                 <option value="">(no project)</option>
                 @foreach (var project in Projects)
                 {
-                    <option value="@project.Id">@project.Name</option>
+                    <option @key="project.Id" value="@project.Id">@project.Name</option>
                 }
             </InputSelect>
         </div>
@@ -53,7 +53,6 @@
     [Parameter, EditorRequired]
     public TaskFormModel Model { get; set; } = default!;
 
-    // форма не знает, создаёт она задачу или редактирует: это решает страница
     [Parameter, EditorRequired]
     public EventCallback<TaskFormModel> OnSubmit { get; set; }
 

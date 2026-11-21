@@ -1,0 +1,9 @@
+﻿<div class="loading-indicator">
+    <div class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></div>
+    <span>@Text</span>
+</div>
+
+@code {
+    [Parameter]
+    public string Text { get; set; } = "Loading...";
+}

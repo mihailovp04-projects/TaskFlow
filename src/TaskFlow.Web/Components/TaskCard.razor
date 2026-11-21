@@ -23,6 +23,13 @@
 
     <footer class="task-card-actions">
         <a class="btn btn-sm btn-outline-primary" href="tasks/@Item.Id/edit">Edit</a>
+        @if (OnStatusChange.HasDelegate)
+{
+    <button type="button" class="btn btn-sm btn-outline-success"
+            @onclick="() => OnStatusChange.InvokeAsync(new StatusChangeRequest(Item.Id, NextStatus))">
+        @StatusButtonText
+    </button>
+}
         @if (OnDelete.HasDelegate)
         {
             <ConfirmButton ButtonClass="btn-sm btn-outline-danger" OnConfirmed="() => OnDelete.InvokeAsync(Item.Id)">
@@ -40,6 +47,22 @@
     // родитель получает id задачи и сам решает, как удалять
     [Parameter]
     public EventCallback<int> OnDelete { get; set; }
+    [Parameter]
+public EventCallback<StatusChangeRequest> OnStatusChange { get; set; }
+
+private string StatusButtonText => Item.Status switch
+{
+    TaskItemStatus.Todo => "Start",
+    TaskItemStatus.InProgress => "Complete",
+    _ => "Reopen"
+};
+
+private TaskItemStatus NextStatus => Item.Status switch
+{
+    TaskItemStatus.Todo => TaskItemStatus.InProgress,
+    TaskItemStatus.InProgress => TaskItemStatus.Done,
+    _ => TaskItemStatus.Todo
+};
 
     private bool IsOverdue => TaskDisplay.IsOverdue(Item, DateTime.Today);
 }

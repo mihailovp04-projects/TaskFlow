@@ -1,4 +1,5 @@
 ﻿@page "/tasks/{Id:int}/edit"
+@attribute [Authorize]
 @inject ITaskApiClient Api
 @inject NavigationManager Navigation
 

@@ -10,20 +10,27 @@ using TaskFlow.Domain.Services;
 using Microsoft.EntityFrameworkCore;
 using TaskFlow.Infrastructure.Data;
 using TaskFlow.Infrastructure.Repositories;
-
-
+using TaskFlow.Infrastructure.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Строка подключения приходит из user-secrets (Development) или переменной окружения (Docker, неделя 9)
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' is not configured.");
 
-// AddDbContext регистрирует контекст как Scoped: один экземпляр на HTTP-запрос
 builder.Services.AddDbContext<TaskFlowDbContext>(options =>
     options.UseSqlServer(connectionString));
 
+builder.Services.AddAuthorization();
+builder.Services.AddIdentityApiEndpoints<AppUser>()
+    .AddEntityFrameworkStores<TaskFlowDbContext>();
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("WebClient", policy => policy
+        .WithOrigins("http://localhost:5090")
+        .AllowAnyHeader()
+        .AllowAnyMethod());
+});
 
 builder.Services
     .AddControllers()
@@ -66,25 +73,27 @@ builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 var app = builder.Build();
 
 app.UseMiddleware<CorrelationIdMiddleware>();
-
 app.UseMiddleware<RequestTimingMiddleware>();
 app.UseExceptionHandler();
-
 
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
     app.MapScalarApiReference();
 
-    // Демонстрационные данные только в Development; DbContext Scoped, поэтому нужен scope
     await using var scope = app.Services.CreateAsyncScope();
     var db = scope.ServiceProvider.GetRequiredService<TaskFlowDbContext>();
     await DbSeeder.SeedAsync(db);
 }
 
-
+app.UseCors("WebClient");
+app.UseAuthentication();
 app.UseAuthorization();
+
 app.MapControllers();
 
+app.MapGroup("/api/auth")
+    .MapIdentityApi<AppUser>()
+    .WithTags("Auth");
 
 app.Run();

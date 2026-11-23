@@ -1,4 +1,7 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
+﻿@implements IDisposable
+@inject AppState AppState
+
+<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="">TaskFlow</a>
         <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
@@ -10,38 +13,65 @@
 <div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
     <nav class="flex-column">
         <div class="nav-item px-3">
-            @* All: пункт активен только на самом адресе "/" *@
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
                 <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
             </NavLink>
         </div>
+
+        <AuthorizeView>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="tasks">
+                    <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Tasks
+                    @if (AppState.OpenTaskCount > 0)
+                    {
+                        <span class="badge bg-light text-dark ms-2">@AppState.OpenTaskCount</span>
+                    }
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="tasks/new" Match="NavLinkMatch.All">
+                    <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> New task
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="projects">
+                    <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Projects
+                </NavLink>
+            </div>
+        </AuthorizeView>
+
         <div class="nav-item px-3">
-            @* Prefix (по умолчанию): активен и на /tasks/5, и на /tasks/5/edit *@
-            <NavLink class="nav-link" href="tasks">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Tasks
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="tasks/new" Match="NavLinkMatch.All">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> New task
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="projects">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Projects
+            <NavLink class="nav-link" href="interop">
+                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> JS interop
             </NavLink>
         </div>
     </nav>
 </div>
 
 @code {
-    // на узком экране меню сворачивается
+    // на узком экране меню сворачивается (неделя 6)
     private bool collapseNavMenu = true;
 
     private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
 
+    protected override void OnInitialized()
+    {
+        AppState.OnChange += HandleStateChanged;
+    }
+
     private void ToggleNavMenu()
     {
         collapseNavMenu = !collapseNavMenu;
+    }
+
+    private void HandleStateChanged()
+    {
+        // Изменение пришло из другого компонента: просим Blazor перерисовать меню
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        AppState.OnChange -= HandleStateChanged;
     }
 }

@@ -1,0 +1,85 @@
+﻿@page "/register"
+@inject AuthService Auth
+@inject NavigationManager Navigation
+@inject ToastService Toasts
+
+<PageTitle>Register - TaskFlow</PageTitle>
+
+<h1>Create an account</h1>
+
+<div class="row">
+    <div class="col-md-6 col-lg-4">
+        <EditForm Model="model" OnValidSubmit="HandleRegisterAsync">
+            <DataAnnotationsValidator />
+
+            <div class="mb-3">
+                <label for="email" class="form-label">Email</label>
+                <InputText id="email" class="form-control" autocomplete="username" @bind-Value="model.Email" />
+                <ValidationMessage For="() => model.Email" />
+            </div>
+
+            <div class="mb-3">
+                <label for="password" class="form-label">Password</label>
+                <InputText id="password" type="password" class="form-control" autocomplete="new-password" @bind-Value="model.Password" />
+                <ValidationMessage For="() => model.Password" />
+                <div class="form-text">At least 6 characters: lower case, upper case, digit and symbol.</div>
+            </div>
+
+            <div class="mb-3">
+                <label for="confirm" class="form-label">Confirm password</label>
+                <InputText id="confirm" type="password" class="form-control" autocomplete="new-password" @bind-Value="model.ConfirmPassword" />
+                <ValidationMessage For="() => model.ConfirmPassword" />
+            </div>
+
+            @if (errors.Count > 0)
+            {
+                <div class="alert alert-danger" role="alert">
+                    @foreach (var error in errors)
+                    {
+                        <div>@error</div>
+                    }
+                </div>
+            }
+
+            <button type="submit" class="btn btn-primary" disabled="@isBusy">
+                @(isBusy ? "Creating..." : "Create account")
+            </button>
+            <a class="ms-3" href="login">I already have an account</a>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    private readonly RegisterModel model = new();
+    private IReadOnlyList<string> errors = [];
+    private bool isBusy;
+
+    [SupplyParameterFromQuery]
+    public string? ReturnUrl { get; set; }
+
+    private async Task HandleRegisterAsync()
+    {
+        isBusy = true;
+        errors = [];
+
+        var registerResult = await Auth.RegisterAsync(model.Email, model.Password);
+        if (!registerResult.Succeeded)
+        {
+            isBusy = false;
+            errors = registerResult.Errors;
+            return;
+        }
+
+        // После успешной регистрации сразу входим, чтобы не вводить пароль второй раз
+        var loginResult = await Auth.LoginAsync(model.Email, model.Password);
+        isBusy = false;
+        if (!loginResult.Succeeded)
+        {
+            errors = loginResult.Errors;
+            return;
+        }
+
+        await Toasts.ShowAsync("Your account has been created.", ToastKind.Success);
+        Navigation.NavigateTo(SafeReturnUrl.From(ReturnUrl));
+    }
+}

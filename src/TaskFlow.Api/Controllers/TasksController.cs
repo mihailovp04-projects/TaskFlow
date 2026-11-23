@@ -3,11 +3,15 @@ using TaskFlow.Api.Mappings;
 using TaskFlow.Domain.Abstractions;
 using TaskFlow.Domain.Enums;
 using TaskFlow.Shared.Dtos;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
+
 
 namespace TaskFlow.Api.Controllers;
 
 [ApiController]
 [Route("api/tasks")]
+[Authorize]
 public sealed class TasksController(
     ITaskService taskService,
     IProjectService projectService,
@@ -55,10 +59,20 @@ public sealed class TasksController(
             ModelState.AddModelError(nameof(request.ProjectId), $"Project {request.ProjectId} does not exist.");
             return ValidationProblem(ModelState);
         }
-        var created = await taskService.CreateAsync(request.ToEntity(), cancellationToken);
+        var ownerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (ownerId is null)
+        {
+            return Unauthorized();
+        }
+
+        var task = request.ToEntity();
+        task.AssignOwner(ownerId);
+
+        var created = await taskService.CreateAsync(task, cancellationToken);
         logger.LogInformation("Task {TaskId} created with priority {Priority}", created.Id, created.Priority);
 
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, created.ToDto(Now()));
+
     }
         
 

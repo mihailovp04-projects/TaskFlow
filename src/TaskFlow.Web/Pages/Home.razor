@@ -1,32 +1,33 @@
 ﻿@page "/"
-@inject ITaskApiClient Api
 
 <PageTitle>TaskFlow</PageTitle>
 
 <h1>TaskFlow</h1>
-<p>Blazor WebAssembly client. Week 6: data comes from an in-memory fake API client.</p>
 
-@if (_tasks is null)
+@if (userName is null)
 {
-    <LoadingIndicator />
+    <p>Sign in to manage your tasks.</p>
+    <a class="btn btn-primary" href="login">Sign in</a>
 }
 else
 {
-    <ul>
-        @foreach (var status in Enum.GetValues<TaskItemStatus>())
-        {
-            <li>@TaskDisplay.StatusLabel(status): <strong>@_tasks.Count(t => t.Status == status)</strong></li>
-        }
-        <li>Overdue: <strong>@_tasks.Count(t => TaskDisplay.IsOverdue(t, DateTime.Today))</strong></li>
-    </ul>
-    <a class="btn btn-primary" href="tasks">Open tasks</a>
+    <p>Hello, @userName! Open the <a href="tasks">task list</a> to continue.</p>
 }
 
 @code {
-    private IReadOnlyList<TaskDto>? _tasks;
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
 
-    protected override async Task OnInitializedAsync()
+    private string? userName;
+
+    protected override async Task OnParametersSetAsync()
     {
-        _tasks = await Api.GetTasksAsync();
+        if (AuthenticationStateTask is null)
+        {
+            return;
+        }
+
+        var state = await AuthenticationStateTask;
+        userName = state.User.Identity?.IsAuthenticated == true ? state.User.Identity.Name : null;
     }
 }

@@ -11,6 +11,20 @@ public class TaskItem : BaseEntity
     private string _title = string.Empty;
     private string? _description;
 
+    // Идентификатор пользователя-владельца (AspNetUsers.Id). Домен не знает о классе AppUser
+    public string? OwnerId { get; private set; }
+
+    public void AssignOwner(string ownerId)
+    {
+        if (string.IsNullOrWhiteSpace(ownerId))
+        {
+            throw new ArgumentException("Owner id is required.", nameof(ownerId));
+        }
+
+        OwnerId = ownerId;
+    }
+
+
     [JsonConstructor]
     private TaskItem()
     {
@@ -117,3 +131,4 @@ public class TaskItem : BaseEntity
     public override string ToString() =>
         $"#{Id} {Title} [{Priority}, {Status}]" + (DueDate is null ? string.Empty : $" срок: {DueDate:yyyy-MM-dd}");
 }
+

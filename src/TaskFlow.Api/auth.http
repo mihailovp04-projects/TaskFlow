@@ -1,0 +1,40 @@
+@baseUrl = http://localhost:5080
+
+### 1. Регистрация (повторный запуск вернёт 400 DuplicateUserName - это нормально)
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "anna@taskflow.local",
+  "password": "Passw0rd!"
+}
+
+### 2. Слабый пароль: ожидаем 400 со списком ошибок
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "weak@taskflow.local",
+  "password": "123"
+}
+
+### 3. Вход: ответ содержит accessToken
+# @name login
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "anna@taskflow.local",
+  "password": "Passw0rd!"
+}
+
+### 4. Задачи без токена: ожидаем 401
+GET {{baseUrl}}/api/tasks
+
+### 5. Задачи с токеном: ожидаем 200
+GET {{baseUrl}}/api/tasks
+Authorization: Bearer {{login.response.body.$.accessToken}}
+
+### 6. Кто я: email текущего пользователя
+GET {{baseUrl}}/api/auth/manage/info
+Authorization: Bearer {{login.response.body.$.accessToken}}

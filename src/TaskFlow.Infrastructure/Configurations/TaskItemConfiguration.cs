@@ -1,6 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using TaskFlow.Domain.Entities;
+using TaskFlow.Infrastructure.Identity;
+
 
 namespace TaskFlow.Infrastructure.Configurations;
 
@@ -47,5 +49,15 @@ public class TaskItemConfiguration : IEntityTypeConfiguration<TaskItem>
                 right => right.HasOne<Tag>().WithMany().HasForeignKey("TagId"),
                 left => left.HasOne<TaskItem>().WithMany().HasForeignKey("TaskItemId"),
                 join => join.HasKey("TaskItemId", "TagId"));
+
+        // Владелец задачи: nvarchar(450) как AspNetUsers.Id, индекс для фильтра по владельцу (неделя 8)
+        builder.Property(t => t.OwnerId).HasMaxLength(450);
+        builder.HasIndex(t => t.OwnerId);
+        builder.HasOne<AppUser>()
+            .WithMany()
+            .HasForeignKey(t => t.OwnerId)
+            .OnDelete(DeleteBehavior.SetNull);
+
     }
+
 }

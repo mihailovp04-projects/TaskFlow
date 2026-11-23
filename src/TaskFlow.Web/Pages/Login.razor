@@ -1,0 +1,73 @@
+﻿@page "/login"
+@inject AuthService Auth
+@inject NavigationManager Navigation
+@inject ToastService Toasts
+
+<PageTitle>Sign in - TaskFlow</PageTitle>
+
+<h1>Sign in</h1>
+
+<div class="row">
+    <div class="col-md-6 col-lg-4">
+        <EditForm Model="model" OnValidSubmit="HandleLoginAsync">
+            <DataAnnotationsValidator />
+
+            <div class="mb-3">
+                <label for="email" class="form-label">Email</label>
+                <InputText id="email" class="form-control" autocomplete="username" @bind-Value="model.Email" />
+                <ValidationMessage For="() => model.Email" />
+            </div>
+
+            <div class="mb-3">
+                <label for="password" class="form-label">Password</label>
+                <InputText id="password" type="password" class="form-control" autocomplete="current-password" @bind-Value="model.Password" />
+                <ValidationMessage For="() => model.Password" />
+            </div>
+
+            @if (errors.Count > 0)
+            {
+                <div class="alert alert-danger" role="alert">
+                    @foreach (var error in errors)
+                    {
+                        <div>@error</div>
+                    }
+                </div>
+            }
+
+            <button type="submit" class="btn btn-primary" disabled="@isBusy">
+                @(isBusy ? "Signing in..." : "Sign in")
+            </button>
+            <a class="ms-3" href="@RegisterLink">Create an account</a>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    private readonly LoginModel model = new();
+    private IReadOnlyList<string> errors = [];
+    private bool isBusy;
+
+    [SupplyParameterFromQuery]
+    public string? ReturnUrl { get; set; }
+
+    private string RegisterLink =>
+        string.IsNullOrEmpty(ReturnUrl) ? "register" : $"register?returnUrl={Uri.EscapeDataString(ReturnUrl)}";
+
+    private async Task HandleLoginAsync()
+    {
+        isBusy = true;
+        errors = [];
+
+        var result = await Auth.LoginAsync(model.Email, model.Password);
+
+        isBusy = false;
+        if (!result.Succeeded)
+        {
+            errors = result.Errors;
+            return;
+        }
+
+        await Toasts.ShowAsync($"Welcome, {model.Email}!", ToastKind.Success);
+        Navigation.NavigateTo(SafeReturnUrl.From(ReturnUrl));
+    }
+}

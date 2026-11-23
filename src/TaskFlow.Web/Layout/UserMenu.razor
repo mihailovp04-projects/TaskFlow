@@ -1,0 +1,26 @@
+﻿@inject AuthService Auth
+@inject NavigationManager Navigation
+@inject ToastService Toasts
+
+<AuthorizeView>
+    <Authorized>
+        <span class="me-3">@context.User.Identity?.Name</span>
+        <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="LogoutAsync">Log out</button>
+    </Authorized>
+    <NotAuthorized>
+        <a class="me-3" href="login">Sign in</a>
+        <a href="register">Register</a>
+    </NotAuthorized>
+    <Authorizing>
+        <span class="text-muted">...</span>
+    </Authorizing>
+</AuthorizeView>
+
+@code {
+    private async Task LogoutAsync()
+    {
+        await Auth.LogoutAsync();
+        await Toasts.ShowAsync("You have been signed out.");
+        Navigation.NavigateTo("");
+    }
+}

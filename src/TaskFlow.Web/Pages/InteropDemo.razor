@@ -1,0 +1,89 @@
+﻿@page "/interop"
+@inject LocalStorageService Storage
+@inject BrowserDialogService Dialogs
+@inject ToastService Toasts
+
+<PageTitle>JS interop - TaskFlow</PageTitle>
+
+<h1>JS interop playground</h1>
+
+<section class="mb-4">
+    <h2 class="h5">1. localStorage</h2>
+    <div class="input-group mb-2">
+        <input class="form-control" placeholder="Type a note" @bind="note" />
+        <button type="button" class="btn btn-primary" @onclick="SaveNoteAsync">Save</button>
+        <button type="button" class="btn btn-outline-secondary" @onclick="LoadNoteAsync">Load</button>
+        <button type="button" class="btn btn-outline-danger" @onclick="RemoveNoteAsync">Remove</button>
+    </div>
+    <p>Stored value: <code>@(storedNote ?? "(empty)")</code></p>
+</section>
+
+<section class="mb-4">
+    <h2 class="h5">2. confirm()</h2>
+    <button type="button" class="btn btn-warning" @onclick="AskAsync">Ask a question</button>
+    <p class="mt-2">Answer: @confirmAnswer</p>
+</section>
+
+<section class="mb-4">
+    <h2 class="h5">3. Toast module (IJSObjectReference) and calls from JS to .NET</h2>
+    <div class="d-flex gap-2 mb-2">
+        <button type="button" class="btn btn-info" @onclick='() => Toasts.ShowAsync("Information message")'>Info</button>
+        <button type="button" class="btn btn-success" @onclick='() => Toasts.ShowAsync("Saved successfully", ToastKind.Success)'>Success</button>
+        <button type="button" class="btn btn-danger" @onclick='() => Toasts.ShowAsync("Something went wrong", ToastKind.Error)'>Error</button>
+        <button type="button" class="btn btn-dark" @onclick="ShowActionToastAsync">Toast with action</button>
+    </div>
+    <p>Action clicked from JavaScript: <strong>@actionClicks</strong> time(s)</p>
+</section>
+
+@code {
+    private const string NoteKey = "taskflow.demo.note";
+
+    private string note = "";
+    private string? storedNote;
+    private string confirmAnswer = "(not asked yet)";
+    private int actionClicks;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // В WASM Standalone нет prerendering, поэтому localStorage доступен уже здесь
+        storedNote = await Storage.GetItemAsync<string>(NoteKey);
+    }
+
+    private async Task SaveNoteAsync()
+    {
+        await Storage.SetItemAsync(NoteKey, note);
+        storedNote = note;
+    }
+
+    private async Task LoadNoteAsync()
+    {
+        storedNote = await Storage.GetItemAsync<string>(NoteKey);
+    }
+
+    private async Task RemoveNoteAsync()
+    {
+        await Storage.RemoveItemAsync(NoteKey);
+        storedNote = null;
+    }
+
+    private async Task AskAsync()
+    {
+        var ok = await Dialogs.ConfirmAsync("Do you like Blazor?");
+        confirmAnswer = ok ? "Yes (OK)" : "No (Cancel)";
+    }
+
+    private Task ShowActionToastAsync()
+    {
+        return Toasts.ShowAsync(
+            "Click the button inside this toast",
+            ToastKind.Info,
+            actionText: "Count me",
+            onAction: async () =>
+            {
+                // Вызывается из JavaScript через DotNetObjectReference: перерисовку просим сами
+                actionClicks++;
+                await InvokeAsync(StateHasChanged);
+            },
+            durationMs: 8000);
+    }
+}

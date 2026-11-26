@@ -1,0 +1,82 @@
+﻿@page "/profile"
+@attribute [Authorize]
+@inject AuthService Auth
+@inject TokenAuthStateProvider AuthState
+@inject ToastService Toasts
+@inject NavigationManager Navigation
+
+<PageTitle>Profile - TaskFlow</PageTitle>
+
+<h1>Profile</h1>
+
+<dl class="row">
+    <dt class="col-sm-3">Email</dt>
+    <dd class="col-sm-9">@email</dd>
+
+    <dt class="col-sm-3">Token expires in</dt>
+    <dd class="col-sm-9">@minutesLeft min</dd>
+</dl>
+
+<button type="button" class="btn btn-primary" disabled="@isBusy" @onclick="CheckWithServerAsync">
+    @(isBusy ? "Checking..." : "Check with server")
+</button>
+
+@if (error is not null)
+{
+    <div class="alert alert-danger mt-3">@error</div>
+}
+
+@if (serverProfile is not null)
+{
+    <div class="alert alert-success mt-3">
+        <div>Server email: <strong>@serverProfile.Email</strong></div>
+        <div>Email confirmed: <strong>@serverProfile.IsEmailConfirmed</strong></div>
+    </div>
+}
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
+
+    private string? email;
+    private int minutesLeft;
+    private ProfileInfo? serverProfile;
+    private string? error;
+    private bool isBusy;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AuthenticationStateTask is not null)
+        {
+            var state = await AuthenticationStateTask;
+            email = state.User.Identity?.Name;
+        }
+
+        var session = await AuthState.GetSessionAsync();
+        if (session is not null)
+        {
+            minutesLeft = (int)(session.ExpiresAt - DateTimeOffset.UtcNow).TotalMinutes;
+        }
+    }
+
+    private async Task CheckWithServerAsync()
+    {
+        isBusy = true;
+        error = null;
+        serverProfile = null;
+
+        var result = await Auth.GetProfileAsync();
+        isBusy = false;
+
+        if (result.Unauthorized)
+        {
+            await Auth.LogoutAsync();
+            await Toasts.ShowAsync("Session expired", ToastKind.Warning);
+            Navigation.NavigateTo("login?returnUrl=profile");
+            return;
+        }
+
+        error = result.Error;
+        serverProfile = result.Profile;
+    }
+}

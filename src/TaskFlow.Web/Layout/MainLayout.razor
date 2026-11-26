@@ -1,5 +1,7 @@
 ﻿@inherits LayoutComponentBase
+@implements IDisposable
 @inject AppState AppState
+@inject ThemeState Theme
 
 <div class="page">
     <div class="sidebar">
@@ -8,11 +10,14 @@
 
     <main>
         <div class="top-row px-4">
+            <ThemeToggle />
             <UserMenu />
         </div>
 
         <article class="content px-4">
-            @Body
+            <CascadingValue Value="Theme.Current">
+                @Body
+            </CascadingValue>
         </article>
     </main>
 </div>
@@ -20,7 +25,15 @@
 @code {
     protected override async Task OnInitializedAsync()
     {
-        // Загружаем сохранённые настройки из localStorage один раз за жизнь вкладки
+        Theme.OnChange += HandleThemeChanged;
         await AppState.InitializeAsync();
+        await Theme.InitializeAsync();
+    }
+
+    private void HandleThemeChanged() => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        Theme.OnChange -= HandleThemeChanged;
     }
 }

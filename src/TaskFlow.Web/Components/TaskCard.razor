@@ -1,6 +1,6 @@
-﻿<article class="task-card @(IsOverdue ? "overdue" : null)">
+﻿<article class="task-card @(IsOverdue ? "overdue" : null) @(Theme?.IsDark == true ? "bg-dark text-white" : null)">
     <header class="task-card-header">
-        <a class="task-title" href="tasks/@Item.Id">@Item.Title</a>
+        <a class="task-title @(Theme?.IsDark == true ? "link-light" : null)" href="tasks/@Item.Id">@Item.Title</a>
         <PriorityBadge Priority="Item.Priority" />
     </header>
 
@@ -24,12 +24,12 @@
     <footer class="task-card-actions">
         <a class="btn btn-sm btn-outline-primary" href="tasks/@Item.Id/edit">Edit</a>
         @if (OnStatusChange.HasDelegate)
-{
-    <button type="button" class="btn btn-sm btn-outline-success"
-            @onclick="() => OnStatusChange.InvokeAsync(new StatusChangeRequest(Item.Id, NextStatus))">
-        @StatusButtonText
-    </button>
-}
+        {
+            <button type="button" class="btn btn-sm btn-outline-success"
+                    @onclick="() => OnStatusChange.InvokeAsync(new StatusChangeRequest(Item.Id, NextStatus))">
+                @StatusButtonText
+            </button>
+        }
         @if (OnDelete.HasDelegate)
         {
             <ConfirmButton ButtonClass="btn-sm btn-outline-danger" OnConfirmed="() => OnDelete.InvokeAsync(Item.Id)">
@@ -40,29 +40,31 @@
 </article>
 
 @code {
-    // параметр назван Item, а не Task: имя Task спрятало бы тип System.Threading.Tasks.Task
     [Parameter, EditorRequired]
     public TaskDto Item { get; set; } = default!;
 
-    // родитель получает id задачи и сам решает, как удалять
     [Parameter]
     public EventCallback<int> OnDelete { get; set; }
+
     [Parameter]
-public EventCallback<StatusChangeRequest> OnStatusChange { get; set; }
+    public EventCallback<StatusChangeRequest> OnStatusChange { get; set; }
 
-private string StatusButtonText => Item.Status switch
-{
-    TaskItemStatus.Todo => "Start",
-    TaskItemStatus.InProgress => "Complete",
-    _ => "Reopen"
-};
+    [CascadingParameter]
+    private ThemeInfo? Theme { get; set; }
 
-private TaskItemStatus NextStatus => Item.Status switch
-{
-    TaskItemStatus.Todo => TaskItemStatus.InProgress,
-    TaskItemStatus.InProgress => TaskItemStatus.Done,
-    _ => TaskItemStatus.Todo
-};
+    private string StatusButtonText => Item.Status switch
+    {
+        TaskItemStatus.Todo => "Start",
+        TaskItemStatus.InProgress => "Complete",
+        _ => "Reopen"
+    };
+
+    private TaskItemStatus NextStatus => Item.Status switch
+    {
+        TaskItemStatus.Todo => TaskItemStatus.InProgress,
+        TaskItemStatus.InProgress => TaskItemStatus.Done,
+        _ => TaskItemStatus.Todo
+    };
 
     private bool IsOverdue => TaskDisplay.IsOverdue(Item, DateTime.Today);
 }

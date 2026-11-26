@@ -1,9 +1,9 @@
 ﻿using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 
 namespace TaskFlow.Web.Auth;
 
-// Регистрация, вход и выход через эндпоинты Identity API (/api/auth/*)
 public sealed class AuthService(HttpClient http, TokenAuthStateProvider authState)
 {
     private const string ApiUnavailable = "Cannot reach the API. Is TaskFlow.Api running on http://localhost:5080?";
@@ -32,7 +32,6 @@ public sealed class AuthService(HttpClient http, TokenAuthStateProvider authStat
             return AuthResult.Failure("The API returned an empty token.");
         }
 
-        // Токен Identity API не JWT: срок действия вычисляем сами из expiresIn
         var session = new AuthSession(
             email,
             token.AccessToken,
@@ -69,8 +68,40 @@ public sealed class AuthService(HttpClient http, TokenAuthStateProvider authStat
         return AuthResult.Failure($"Registration failed: HTTP {(int)response.StatusCode}.");
     }
 
-    // У bearer-токенов нет серверного выхода: клиент просто забывает токен
     public Task LogoutAsync() => authState.SignOutAsync();
+
+    public async Task<ProfileResult> GetProfileAsync(CancellationToken ct = default)
+    {
+        var session = await authState.GetSessionAsync();
+        if (session is null)
+        {
+            return new ProfileResult(null, true, null);
+        }
+
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, "api/auth/manage/info");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", session.AccessToken);
+            using var response = await http.SendAsync(request, ct);
+
+            if (response.StatusCode == HttpStatusCode.Unauthorized)
+            {
+                return new ProfileResult(null, true, null);
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                return new ProfileResult(null, false, $"HTTP {(int)response.StatusCode}");
+            }
+
+            var profile = await response.Content.ReadFromJsonAsync<ProfileInfo>(ct);
+            return new ProfileResult(profile, false, null);
+        }
+        catch (HttpRequestException)
+        {
+            return new ProfileResult(null, false, ApiUnavailable);
+        }
+    }
 
     private async Task<HttpResponseMessage?> PostAsync<T>(string url, T body, CancellationToken ct)
     {
@@ -80,7 +111,6 @@ public sealed class AuthService(HttpClient http, TokenAuthStateProvider authStat
         }
         catch (HttpRequestException)
         {
-            // API не запущен или запрос заблокирован CORS
             return null;
         }
     }

@@ -22,7 +22,7 @@
                 <label for="password" class="form-label">Password</label>
                 <InputText id="password" type="password" class="form-control" autocomplete="new-password" @bind-Value="model.Password" />
                 <ValidationMessage For="() => model.Password" />
-                <div class="form-text">At least 6 characters: lower case, upper case, digit and symbol.</div>
+                <div class="form-text">At least 8 characters: lower case, upper case, digit and symbol.</div>
             </div>
 
             <div class="mb-3">
@@ -70,7 +70,6 @@
             return;
         }
 
-        // После успешной регистрации сразу входим, чтобы не вводить пароль второй раз
         var loginResult = await Auth.LoginAsync(model.Email, model.Password);
         isBusy = false;
         if (!loginResult.Succeeded)

@@ -2,21 +2,26 @@
 
 <PageTitle>TaskFlow</PageTitle>
 
-<h1>TaskFlow</h1>
+<div class="p-4 rounded @(Theme?.IsDark == true ? "bg-secondary text-white" : "bg-light")">
+    <h1>TaskFlow</h1>
 
-@if (userName is null)
-{
-    <p>Sign in to manage your tasks.</p>
-    <a class="btn btn-primary" href="login">Sign in</a>
-}
-else
-{
-    <p>Hello, @userName! Open the <a href="tasks">task list</a> to continue.</p>
-}
+    @if (userName is null)
+    {
+        <p>Sign in to manage your tasks.</p>
+        <a class="btn btn-primary" href="login">Sign in</a>
+    }
+    else
+    {
+        <p>Hello, @userName! Open the <a class="@(Theme?.IsDark == true ? "link-light" : "")" href="tasks">task list</a> to continue.</p>
+    }
+</div>
 
 @code {
     [CascadingParameter]
     private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
+
+    [CascadingParameter]
+    private ThemeInfo? Theme { get; set; }
 
     private string? userName;
 

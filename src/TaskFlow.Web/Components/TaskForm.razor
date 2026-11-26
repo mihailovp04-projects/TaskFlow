@@ -1,4 +1,8 @@
-﻿<EditForm Model="Model" OnValidSubmit="HandleValidSubmitAsync">
+﻿@inject BrowserDialogService Dialogs
+@inject ToastService Toasts
+@inject NavigationManager Navigation
+
+<EditForm EditContext="_editContext" OnValidSubmit="HandleValidSubmitAsync" OnInvalidSubmit="HandleInvalidSubmitAsync">
     <DataAnnotationsValidator />
     <ValidationSummary class="text-danger" />
 
@@ -46,7 +50,7 @@
     <button type="submit" class="btn btn-primary" disabled="@_saving">
         @(_saving ? "Saving..." : SubmitText)
     </button>
-    <a class="btn btn-link" href="@CancelHref">Cancel</a>
+    <button type="button" class="btn btn-link" @onclick="CancelAsync">Cancel</button>
 </EditForm>
 
 @code {
@@ -65,7 +69,16 @@
     [Parameter]
     public string CancelHref { get; set; } = "tasks";
 
+    private EditContext _editContext = default!;
     private bool _saving;
+
+    protected override void OnParametersSet()
+    {
+        if (_editContext is null || !ReferenceEquals(_editContext.Model, Model))
+        {
+            _editContext = new EditContext(Model);
+        }
+    }
 
     private async Task HandleValidSubmitAsync()
     {
@@ -78,5 +91,22 @@
         {
             _saving = false;
         }
+    }
+
+    private Task HandleInvalidSubmitAsync() =>
+        Toasts.ShowAsync("Please fix the validation errors.", ToastKind.Error);
+
+    private async Task CancelAsync()
+    {
+        if (_editContext.IsModified())
+        {
+            var leave = await Dialogs.ConfirmAsync("You have unsaved changes. Leave the page?");
+            if (!leave)
+            {
+                return;
+            }
+        }
+
+        Navigation.NavigateTo(CancelHref);
     }
 }

@@ -168,3 +168,12 @@ code {
     font-size: 1.25rem;
     line-height: 1;
 }
+body[data-theme="dark"] {
+    background: #212529;
+    color: #f8f9fa;
+}
+
+    body[data-theme="dark"] .top-row {
+        background-color: #343a40 !important;
+        border-color: #495057 !important;
+    }

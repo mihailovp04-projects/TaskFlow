@@ -2,6 +2,7 @@
 @attribute [Authorize]
 @inject ITaskApiClient Api
 @inject NavigationManager Navigation
+@inject ToastService Toasts
 
 <PageTitle>New task - TaskFlow</PageTitle>
 
@@ -17,7 +18,6 @@ else
 }
 
 @code {
-    // /tasks/new?projectId=2 сразу выбирает проект
     [SupplyParameterFromQuery]
     public int? ProjectId { get; set; }
 
@@ -32,7 +32,15 @@ else
 
     private async Task CreateAsync(TaskFormModel model)
     {
-        var created = await Api.CreateTaskAsync(model.ToCreateRequest());
-        Navigation.NavigateTo($"tasks/{created.Id}");
+        try
+        {
+            var created = await Api.CreateTaskAsync(model.ToCreateRequest());
+            await Toasts.ShowAsync($"Task \"{created.Title}\" created.", ToastKind.Success);
+            Navigation.NavigateTo($"tasks/{created.Id}");
+        }
+        catch (Exception ex)
+        {
+            await Toasts.ShowAsync($"Could not create the task: {ex.Message}", ToastKind.Error);
+        }
     }
 }

@@ -2,11 +2,14 @@
 using TaskFlow.Api.Mappings;
 using TaskFlow.Domain.Abstractions;
 using TaskFlow.Shared.Dtos;
+using Microsoft.AspNetCore.Authorization;
+
 
 namespace TaskFlow.Api.Controllers;
 
 [ApiController]
 [Route("api/projects")]
+[Authorize]
 public sealed class ProjectsController(
     IProjectService projectService,
     ITaskService taskService,

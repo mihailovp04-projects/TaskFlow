@@ -23,6 +23,7 @@ builder.Services.AddScoped<LocalStorageService>();
 builder.Services.AddScoped<BrowserDialogService>();
 builder.Services.AddScoped<ToastService>();
 builder.Services.AddScoped<AppState>();
+builder.Services.AddScoped<ThemeState>();
 
 // Неделя 7: аутентификация
 builder.Services.AddAuthorizationCore();

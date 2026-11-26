@@ -21,7 +21,12 @@ builder.Services.AddDbContext<TaskFlowDbContext>(options =>
     options.UseSqlServer(connectionString));
 
 builder.Services.AddAuthorization();
-builder.Services.AddIdentityApiEndpoints<AppUser>()
+builder.Services.AddIdentityApiEndpoints<AppUser>(options =>
+{
+    options.Password.RequiredLength = 8;
+    options.Password.RequireNonAlphanumeric = true;
+    options.User.RequireUniqueEmail = true;
+})
     .AddEntityFrameworkStores<TaskFlowDbContext>();
 
 builder.Services.AddCors(options =>

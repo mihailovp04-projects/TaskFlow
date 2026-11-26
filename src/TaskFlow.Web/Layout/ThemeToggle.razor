@@ -1,0 +1,5 @@
+﻿@inject ThemeState Theme
+
+<button type="button" class="btn btn-outline-secondary btn-sm me-3" @onclick="Theme.ToggleAsync">
+    @(Theme.Current.IsDark ? "Light theme" : "Dark theme")
+</button>

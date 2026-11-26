@@ -2,6 +2,7 @@
 @attribute [Authorize]
 @inject ITaskApiClient Api
 @inject NavigationManager Navigation
+@inject ToastService Toasts
 
 <PageTitle>Edit task - TaskFlow</PageTitle>
 
@@ -29,7 +30,6 @@ else
     private IReadOnlyList<ProjectDto>? _projects;
     private bool _notFound;
 
-    // OnParametersSetAsync, а не OnInitializedAsync: при смене Id экземпляр страницы переиспользуется
     protected override async Task OnParametersSetAsync()
     {
         _model = null;
@@ -48,13 +48,22 @@ else
 
     private async Task SaveAsync(TaskFormModel model)
     {
-        var updated = await Api.UpdateTaskAsync(Id, model.ToUpdateRequest());
-        if (!updated)
+        try
         {
-            _notFound = true;
-            return;
-        }
+            var updated = await Api.UpdateTaskAsync(Id, model.ToUpdateRequest());
+            if (!updated)
+            {
+                await Toasts.ShowAsync($"Task #{Id} was not found.", ToastKind.Error);
+                _notFound = true;
+                return;
+            }
 
-        Navigation.NavigateTo($"tasks/{Id}");
+            await Toasts.ShowAsync("Changes saved.", ToastKind.Success);
+            Navigation.NavigateTo($"tasks/{Id}");
+        }
+        catch (Exception ex)
+        {
+            await Toasts.ShowAsync($"Could not save the task: {ex.Message}", ToastKind.Error);
+        }
     }
 }

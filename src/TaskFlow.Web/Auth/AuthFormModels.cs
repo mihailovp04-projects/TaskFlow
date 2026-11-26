@@ -2,7 +2,6 @@
 
 namespace TaskFlow.Web.Auth;
 
-// Модели форм. Клиентская валидация - для удобства; окончательно правила проверяет сервер
 public sealed class LoginModel
 {
     [Required(ErrorMessage = "Email is required.")]
@@ -20,7 +19,7 @@ public sealed class RegisterModel
     public string Email { get; set; } = "";
 
     [Required(ErrorMessage = "Password is required.")]
-    [MinLength(6, ErrorMessage = "Password must be at least 6 characters.")]
+    [MinLength(8, ErrorMessage = "Password must be at least 8 characters.")]
     [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z\d]).+$",
         ErrorMessage = "Password needs a lower case letter, an upper case letter, a digit and a symbol.")]
     public string Password { get; set; } = "";

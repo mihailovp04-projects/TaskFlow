@@ -196,10 +196,10 @@ else
 
     private void HandleStateChanged() => _ = InvokeAsync(StateHasChanged);
 
-    public void Dispose()
-    {
-        AppState.OnChange -= HandleStateChanged;
-        _loadCts?.Cancel();
-        _loadCts?.Dispose();
-    }
+public void Dispose()
+{
+    AppState.OnChange -= HandleStateChanged;
+    _loadCts?.Cancel();
+    _loadCts?.Dispose();
+}
 }
